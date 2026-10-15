@@ -1,0 +1,18 @@
+<div>
+    <div>
+        <h1>
+            John
+        </h1>
+        <p>
+            Age 30
+        </p>
+    </div>
+    <div>
+        <h1>
+            Jane
+        </h1>
+        <p>
+            Age 25
+        </p>
+    </div>
+</div>

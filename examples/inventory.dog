@@ -1,0 +1,19 @@
+// References, maps and JSON: a little inventory.
+fn add_item (inv: &map, name: str, qty: num) {
+    inv[$name] = ($inv[$name] ?? 0) + $qty;
+}
+
+fn take_item (inv: &map, name: str, qty: num) {
+    have = $inv[$name] ?? 0;
+    if ($have < $qty) { throw "not enough $name: have $have, want $qty" };
+    inv[$name] = $have - $qty;
+}
+
+stock = json.parse('{"apples": 3}');
+add_item &stock apples 2;
+add_item &stock pears 4;
+take_item &stock pears 1;
+pln (try { take_item &stock kiwis 1 } catch e { put "error: $e.value" });
+pln (json.encode($stock));
+total = for name, qty in $stock { put $qty };
+pln "total items: $total";

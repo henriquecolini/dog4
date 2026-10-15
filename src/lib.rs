@@ -36,3 +36,11 @@ pub use runtime::{Builder, OutputBuffer, Runtime};
 pub use stdlib::{Capability, Library};
 pub use value::{Map, Type, Value};
 pub use vm::Vm;
+
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+struct ReadmeDoctests;
+
+#[cfg(doctest)]
+#[doc = include_str!("../docs/embedding.md")]
+struct EmbeddingDoctests;

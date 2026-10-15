@@ -1,0 +1,8 @@
+fn fizzbuzz (n: num) {
+    put if ($n % 15 == 0) { put FizzBuzz }
+    else if ($n % 3 == 0) { put Fizz }
+    else if ($n % 5 == 0) { put Buzz }
+    else { put $n }
+}
+
+pln { join (for i in (1..16) { put [{ fizzbuzz $i }] }) };

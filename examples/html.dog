@@ -1,0 +1,31 @@
+// dog3's html.dog, updated: `%content` is an array in dog4, so it is
+// forwarded with `$%content`, and `div` can now shadow the builtin.
+fn tab (%content) {
+    put for line in { join $content } split "\n" {
+        put if $line { pln "    $line" }
+    }
+}
+
+fn tag (tag, %content) {
+    put <$tag;
+    pln >;
+    tab $%content;
+    put </$tag;
+    pln >;
+}
+
+fn div (%content) { tag div $%content }
+fn p (%content) { tag p $%content }
+fn h1 (%content) { tag h1 $%content }
+
+fn PersonCard (name, age) {
+    div {
+        h1 $name;
+        p Age $age;
+    }
+}
+
+div {
+    PersonCard "John" 30;
+    PersonCard "Jane" 25;
+};

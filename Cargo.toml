@@ -37,6 +37,10 @@ required-features = ["cli"]
 name = "scripts"
 harness = false
 
+[[test]]
+name = "docs"
+harness = false
+
 [[bench]]
 name = "vm"
 harness = false

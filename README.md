@@ -1,348 +1,349 @@
-# `dog3`
+# `dog4`
 
-This is the repository for `dog3`, an experimental, fun, and somewhat esoteric programming language.
-<br>
-`dog3` is a mix of Rust and Bash, and is designed to be as easy to use as it is hard to do anything useful with.
+`dog4` is an experimental, fun and decidedly esoteric programming language.
+It's a mix of Rust and Bash, it's the successor of [dog3](https://github.com/henriquecolini/dog3),
+and it's built to be embedded — its day job is running code that strangers
+type into a Telegram bot, so it is fast, small, and sandboxed to the teeth.
 
-The following `dog3` program prints "Hello world!" to the console:
+The following program prints "Hello, world!":
 
+```dog
+pln Hello, world!
 ```
-pln Hello world!
-```
-```
-> Hello world!
-```
-
-However, this one does not:
-
-```
-{ pln Hello world! }
-```
-```
->
+```text
+Hello, world!
 ```
 
-So, what happened there? It's simple: the output of the function `pln` got **captured** by the scope delimited by the brackets, and this scope was never used for anything. In dog3, the very act of _printing_ values is, in fact, the only way of using them. All operations you do, from math to processing data, are made entirely through printing - which we will simply call **"outputting"** from now on.
+This one doesn't:
 
-To make stuff work, function outputting is fully scoped - that is, whenever a function outputs something, it is appended to its scope, as if the block was a text file.
-
-A block scope is a value by itself, and can be used in exactly the same places as a string can. The following code does indeed work:
-
+```dog
+{ pln Hello, world! }
 ```
-put { pln Hello world! }
-```
-```
-> Hello world!
+```text
 ```
 
-The function `put` simply outputs all of its inputs. It's the most basic and most common function you'll ever use. The function `pln` does the same, but it also appends a newline to the end of the output.
+What happened? The output of `pln` got **captured** by the block. In dog4, the
+very act of *outputting* a value is how you use it: every statement outputs
+into its enclosing block, and a block's value is everything its statements
+output. Blocks are values, so you can output them too:
 
-Just like in Bash, parameters are delimited by spaces (therefore, in our first example, "Hello" and "world!" were, in fact, two separate arguments). If you want to use spaces in a parameter, you can use quotes or escape them:
-
+```dog
+put { pln Hello, world! }
 ```
+```text
+Hello, world!
+```
+
+`put` outputs its argument unchanged — it's the most common function you'll
+ever use. `pln` does the same, but turns everything into text and adds a newline.
+
+## Running it
+
+```sh
+cargo run -- script.dog          # run a file (modules next to it can be `use`d)
+cargo run -- -e 'pln hi'         # run a snippet
+cargo run                        # a REPL
+cargo run -- --sandbox file.dog  # with the limits used for untrusted code
+cargo run -- --disasm file.dog   # show the bytecode instead of running
+```
+
+## Words
+
+Like in Bash, arguments are separated by spaces, and a bare word is just text.
+Quote or escape to keep spaces:
+
+```dog
 pln "Double     quotes!";
 pln 'Single     quotes!';
 pln Escape\ \ \ those\ \ \ spaces!;
+pln I'm fine, thanks. a=b 1+1 https://example.com
 ```
-```
-> Double     quotes!
-> Single     quotes!
-> Escape   those   spaces!
+```text
+Double     quotes!
+Single     quotes!
+Escape   those   spaces!
+I'm fine, thanks. a=b 1+1 https://example.com
 ```
 
-Some characters are special and can't appear in an unquoted parameter: `;` `,` `{` `}` `(` `)` `=` `$` `%` `'` `"` `[` `]` `` ` `` `&`. To use them as text, put them inside quotes (`pln "Hello, world!"`).
+One twist: a bare word that reads *exactly* like a number or a boolean **is**
+one. The rule is lossless — the value prints back as the same text — so
+`007` and `1.50` stay text:
 
-In `dog3`, variables work very similar to Bash as well:
-
+```dog
+pln { type 5 } { type -2.5 } { type true } { type 007 } { type 1.50 } { type 5px }
 ```
+```text
+num num bool str str str
+```
+
+Note the semicolons: you need one after every command, except the last one of
+a block. Newlines don't end statements.
+
+## Variables
+
+```dog
 x = 5;
-pln "I'm $x$x years old!";
-pln "That snake is $x' long!";
-pln '20$x5 = 100$'
+name = Ana;
+pln "Hi $name, you are $x!";
+pln '$x stays as is in single quotes';
+pln "${name}s" "$(1 + 2) apples"
 ```
-```
-> I'm 55 years old!
-> That snake is 5' long!
-> 20$x5 = 100$
-```
-
-Single quotes don't expand variables. Also note that a variable name runs until the next whitespace or special character, so `$x!` refers to a variable called `x!`, not `x` followed by `!`.
-
-And remember: blocks are values, just like strings:
-
-```
-x = {
-    put Foo;
-    put Bar
-};
-put $x$x
-```
-```
-> FooBarFooBar
+```text
+Hi Ana, you are 5!
+$x stays as is in single quotes
+Anas 3 apples
 ```
 
-Do notice the usage of semicolons. You must always include a semicolon after a function call or non-block statement, except for the last statement in a block.
+`$name.field` and `$list[0]` read inside values, so write `${name}.txt` when
+you mean text.
 
-You can nest blocks as much as you want:
+## Values
 
-```
-x = {
-    y = {
-        z = {
-            put foo
-        };
-        put bar $z bar
-    };
-    put baz $y baz
-};
-pln $x
-```
-```
-> baz bar foo bar baz
-```
+dog3 only had strings with a hidden status code. dog4 has everything that fits
+in a JSON document — plus functions:
 
-You may begin to wonder: what data types are available on `dog3`, since everything is just printed?
-
-**There's only one data type in `dog3`: string.**
-
-Well, not exactly. Indeed, you won't be able to use numbers, arrays, or anything useful like that - it really is all strings. That said, the strings themselves carry alongside them an invisible value: the **status code**.
-
-The status code is a number that is used to determine the truthiness of a string. A string with a status code of 0 is truthy, and any other value is falsy. You may be familiar with this concept if you've ever used Bash. You can use the function `status` to get the status code of a string:
-
+```dog
+items = [apple banana "passion fruit"];
+user = [name = Ana, age = 30, tags = [admin]];
+pln $items $items[0] $items[-1] { len $items };
+pln $user $user.name $user.tags[0] $user.missing;
+pln { type $items } { type $user } { type (null) } { type $pln }
 ```
-status "Hello, world!"
-```
-```
-> 0
+```text
+["apple", "banana", "passion fruit"] apple passion fruit 3
+{"name": "Ana", "age": 30, "tags": ["admin"]} Ana admin 
+arr map null fn
 ```
 
-The command `status` can also be used to set the status code of a string:
+`[a b c]` is an array, `[key = value]` is a map; `[]` and `[=]` are empty.
+Commas are optional.
 
+## The fold
+
+So what does a block do when its statements output numbers? Arrays? Maps?
+It **adds them up**. Every type knows how to combine with itself:
+
+```dog
+pln { put 1; put 2; put 3 };
+pln { put [a]; put [b] };
+pln { put [x = 1]; put [y = 2] };
+pln { put true; put false };
+pln { put score: ; put 10 }
 ```
-status "I hold a secret!" 42
-```
-```
-> I hold a secret!
+```text
+6
+["a", "b"]
+{"x": 1, "y": 2}
+false
+score:10
 ```
 
-Knowing this, we can talk about conditionals:
+Numbers add, text and arrays concatenate, maps merge, booleans AND, `null` is
+nothing at all, and anything added to an array is pushed onto it. This is the
+same operation as `+`:
 
+```dog
+pln ([1 2] + [3]) ("hi" + 5) ([a = 1] + [b = 2]) (null + 7)
 ```
-if { eq 1 1 } {
-    pln 1 is equal to 1
+```text
+[1, 2, 3] hi5 {"a": 1, "b": 2} 7
+```
+
+Which makes loops into folds:
+
+```dog
+prices = [10 25 7];
+total = for p in $prices { put $p };
+doubled = for p in $prices { put [($p * 2)] };
+pln $total $doubled
+```
+```text
+42 [20, 50, 14]
+```
+
+Pieces of a word written without spaces are folded too: `user_$id` is text,
+but if `x` is 5, `$x$x` is `10` (inside quotes, `"$x$x"` is always `"55"`).
+
+## Expressions
+
+Math lives inside parentheses and on the right of `=`:
+
+```dog
+x = 6 * 7;
+pln 1+1 (1 + 1) ($x / 4) (2 * $x - 1) ($x % 5) (-$x);
+pln ($x > 40 && $x < 50) (null ?? fallback) (0..4)
+```
+```text
+1+1 2 10.5 83 2 -42
+true fallback [0, 1, 2, 3]
+```
+
+Inside an expression you can call functions as `max(1, 2)`, or write a
+command with arguments: `(len $list)`, `x = upper hello`.
+
+## Control flow
+
+`if`, `while` and `for` are values too — and like any block, their output is
+captured unless you `put` it:
+
+```dog
+x = 7;
+put if ($x > 5) { pln big } else { pln small };
+if ($x > 5) { pln "this is captured and thrown away" };
+pln (for word in "the quick fox" { put [{ upper $word }] });
+pln (for line in "a,b,c" split "," { put "<$line>" });
+pln (for i, v in [x y] { put "$i:$v " });
+i = 0;
+pln (while ($i < 3) { i += 1; put $i })
+```
+```text
+big
+["THE", "QUICK", "FOX"]
+<a><b><c>
+0:x 1:y 
+6
+```
+
+`break` and `continue` work as usual (and keep what was output so far);
+`for` over a map gives its keys (or keys and values).
+
+## Functions
+
+```dog
+fn greet (name) { pln Hello, $name! }
+fn greet () { greet stranger }
+
+fn double (x: num) { put ($x * 2) }
+
+greet; greet dog4;
+pln { double 21 } { double "4.5" }
+```
+```text
+Hello, stranger!
+Hello, dog4!
+42 9
+```
+
+Functions can be **overloaded** by number of arguments and by type, and
+**typed parameters convert** what they're given when it makes sense: `"21"`
+becomes `21` for a `num`, a number becomes text for a `str`, a sentence
+becomes an array of words for an `arr`. A `%rest` parameter collects the rest
+of the arguments, and `$%list` spreads an array back out:
+
+```dog
+fn hug (l, r, %items) { put for x in $items { put $l$x$r } }
+words = [a b c];
+pln { hug < > $%words d e }
+```
+```text
+<a><b><c><d><e>
+```
+
+Functions are values. Lambdas capture variables by reference:
+
+```dog
+fn make_counter () {
+    n = 0;
+    put fn () { n += 1; put $n }
 }
-else {
-    pln 1 is not equal to 1
+count = { make_counter };
+pln ($count()) ($count()) ($count());
+pln { map [1 2 3] fn (x) { put ($x * $x) } }
+```
+```text
+1 2 3
+[1, 4, 9]
+```
+
+## References
+
+Pass `&variable` to let a function change it in place — no copies:
+
+```dog
+fn push (list: &arr, item) { list += [$item] }
+fn incr (n: &num) { n += 1 }
+xs = [];
+push &xs a; push &xs b;
+score = [points = 0];
+incr &score.points;
+pln $xs $score
+```
+```text
+["a", "b"] {"points": 1}
+```
+
+## Errors
+
+```dog
+fn risky (x: num) { put (100 / $x) }
+pln (try { risky abc } catch e { put "oops: $e.message" });
+pln (try { throw [code = 42] } catch e { put $e.value.code })
+```
+```text
+oops: `risky` expects a num for `x`, got str "abc"
+42
+```
+
+## Modules
+
+A module is a file, and a file is a map of its top-level names (except the
+ones starting with `_`). Modules are found by the host program, so they can
+live on disk, in memory, or in a database:
+
+```dog
+use "greet";
+greet.hi Bob;
+pln { keys $greet };
+mod shapes {
+    fn square (side: num) { put ($side * $side) }
 }
+pln { shapes.square 4 }
 ```
-```
->
-```
-
-Wait, that outputted nothing! Of course: the `if` block is a scope, and so, the output of `pln` was captured by it. To bubble it out, we need to use `put`:
-
-```
-put if { eq 1 1 } {
-    pln 1 is equal to 1
-}
-else {
-    pln 1 is not equal to 1
-}
-```
-```
-> 1 is equal to 1
+```text
+Hello Bob
+["hi", "loaded"]
+16
 ```
 
-Same logic applies to `while` loops:
+## Builtins
 
-```
-x = 0;
-put while { lt $x 10 } {
-    put $x;
-    x = { add $x 1 }
-}
-```
-```
-> 0123456789
-```
+| group | functions |
+|---|---|
+| output | `put pln print println` |
+| types | `type num str bool arr` |
+| sequences | `len first last append range keys values contains join split chars reverse sum sort index_of` |
+| math | `add sub mul div max min floor ceil round abs sqrt pow random shuffle pick` |
+| logic | `eq neq lt gt leq geq like and or not true false` |
+| text | `upper lower trim strlen replace starts_with ends_with search matches is_alpha is_alphanumeric` |
+| functions | `map filter reduce each sort_by` |
+| JSON | `json.parse json.encode json.pretty gron` |
+| meta & errors | `src eval fail assert` |
+| network | `get post` |
 
-We can also use `for` loops, to iterate over... strings split by whitespace, of course.
+The full reference is in [docs/language.md](docs/language.md).
 
-```
-put for x in "dog3    is my  favorite  language" {
-    pln - $x
-}
-```
-```
-> - dog3
-> - is
-> - my
-> - favorite
-> - language
-```
+## Embedding
 
-Additionally, you can split a string by any separator you want with `split`:
+```rust
+use dog4::{Builder, Library, Limits, MemoryProvider, OutputBuffer, Value};
 
-```
-put for x in "ideal,for,csv" split "," {
-    pln - $x
-}
-```
-```
-> - ideal
-> - for
-> - csv
+let mut bot = Library::new();
+bot.def("reply", "%text", |_, args| {
+    let text: Vec<String> = args.iter().map(|v| v.to_string()).collect();
+    println!("bot says: {}", text.join(" "));
+    Ok(Value::Null)
+});
+
+let mut runtime = Builder::sandboxed()
+    .limits(Limits::sandbox())
+    .output(OutputBuffer::default())
+    .provider(MemoryProvider::new().with("util", "fn shout (s: str) { put { upper $s } }"))
+    .module("bot", bot.into_value())
+    .build();
+
+runtime.run("message", r#"use "bot"; use "util"; bot.reply { util.shout hi }"#).unwrap();
 ```
 
-So far, we've only used the built-in functions of `dog3`. You can also define your own functions using the `fn` keyword:
-
-```
-fn add_one (x) {
-    put { add $x 1 }
-}
-
-fn say_hello () {
-    pln Hello world!
-}
-
-// Yes, overloading is supported!
-fn say_hello (name) {
-    pln Hello $name
-}
-
-pln { add_one 5 };
-say_hello;
-say_hello dog3
-```
-```
-> 6
-> Hello world!
-> Hello dog3
-```
-
-Functions take specific amounts of arguments. If you want an arbitrary amount of arguments, you can prefix a `%` to the end of the last argument name. This will join all remaining arguments into a single string, separated by spaces:
-
-```
-fn hug (l,r,%args) {
-    put for x in $args {
-        put $l$x$r
-    }
-}
-
-hug < > a b c d e f;
-```
-```
-> <a><b><c><d><e><f>
-```
-
-Two keywords change what a block outputs. `return` stops the enclosing function and makes the given value its output, discarding everything the function output so far. Outside a function, `return` ends the whole program. `clear` throws away everything the current block has output so far, replacing it with the given value (or nothing):
-
-```
-fn find (target, %list) {
-    put for x in $list {
-        if { eq $x $target } {
-            return "found $x"
-        };
-        put "skipped $x\n"
-    };
-    put "not found"
-}
-
-pln { find 3 1 2 3 4 };
-pln { put a; put b; clear c; put d }
-```
-```
-> found 3
-> cd
-```
-
-Here are all the functions you can currently use. The list is small as the language is very young, and will increase over time.
-
-### Module `std`
-
-| Function | Description | Status |
-| -------- | ----------- | ------ |
-| put %args | Outputs `args` | status `args` |
-| pln %args | Outputs `args` followed by a newline | status `args` |
-| print %args | Writes `args` to standard output | truthy |
-| println %args | Writes `args` to standard output followed by a newline | truthy |
-| status arg | Returns the status code of `arg` | status `arg` |
-| status arg st | Outputs `arg` | `st` |
-| src name | Outputs the source code of every overload of function `name` (built-ins appear as stubs) | truthy |
-| eval code | Parses and runs `code` as a separate program that can use the current functions, then outputs its output | status of the program's output, or falsy with the error message if it fails |
-
-### Module `iter`
-
-| Function | Description | Status |
-| -------- | ----------- | ------ |
-| range max | Outputs "0 1 2 ... `max`-1" | truthy if `max` is an integer, falsy otherwise |
-| range min max | Outputs "`min` `min`+1 ... `max`-1" | truthy if all arguments are integers, falsy otherwise |
-| range min max step | Outputs every `step`th number from `min` up to (excluding) `max` | truthy if all arguments are integers and `step` >= 0, falsy otherwise |
-| range min max step sep | Same as above, separated by `sep` instead of spaces | truthy if all arguments are integers and `step` >= 0, falsy otherwise |
-| len arr | Outputs length of `arr`, split by whitespaces | truthy |
-| len arr sep | Outputs length of `arr`, split by `sep` | truthy |
-| first arr n | Outputs first `n` elements of `arr`, split by whitespaces | truthy if n <= len, falsy otherwise |
-| first arr n sep | Outputs first `n` elements of `arr`, split by `sep` | truthy if n <= len, falsy otherwise |
-| last arr n | Outputs last `n` elements of `arr`, split by whitespaces | truthy if n <= len, falsy otherwise |
-| last arr n sep | Outputs last `n` elements of `arr`, split by `sep` | truthy if n <= len, falsy otherwise |
-| append left right | Outputs the combined split by whitespaces of `left` and `right` chained | truthy |
-| append left right sep | Outputs the combined split by `sep` of `left` and `right` chained | truthy |
-
-### Module `logic`
-
-| Function | Description | Status |
-| -------- | ----------- | ------ |
-| true | Outputs "" | truthy
-| false | Outputs "" | falsy
-| eq a b | Outputs "" | truthy if a = b numerically, falsy otherwise
-| neq a b | Outputs "" | truthy if a != b numerically, falsy otherwise
-| lt a b | Outputs "" | truthy if a < b numerically, falsy otherwise
-| gt a b | Outputs "" | truthy if a > b numerically, falsy otherwise
-| leq a b | Outputs "" | truthy if a <= b numerically, falsy otherwise
-| geq a b | Outputs "" | truthy if a >= b numerically, falsy otherwise
-| like a b | Outputs "" | truthy if a == b textually, falsy otherwise
-| and a b | Outputs "" | truthy if status a && status b, falsy otherwise
-| or a b | Outputs "" | truthy if status a \|\| status b, falsy otherwise
-| not a | Outputs "" | truthy if status a != 0, falsy otherwise
-
-### Module `math`
-
-| Function | Description | Status |
-| -------- | ----------- | ------ |
-| add first %others | Outputs decimal float `first` + `others` | truthy if all arguments are numbers, falsy otherwise
-| sub first %others | Outputs decimal float `first` - `others` | truthy if all arguments are numbers, falsy otherwise
-| mul first %others | Outputs decimal float `first` \* `others` | truthy if all arguments are numbers, falsy otherwise
-| div first %others | Outputs decimal float `first` / `others` (divides sequentially) | truthy if all arguments are numbers, falsy otherwise
-| max first %others | Outputs decimal float max(`first`, `others`) | truthy if all arguments are numbers, falsy otherwise
-| min first %others | Outputs decimal float min(`first`, `others`) | truthy if all arguments are numbers, falsy otherwise
-| floor x | Outputs decimal float floor(`x`) | truthy if all arguments are numbers, falsy otherwise
-| ceil x | Outputs decimal float ceil(`x`) | truthy if all arguments are numbers, falsy otherwise
-| random max | Outputs integer random number between 0 (inclusive) and `max` (exclusive) | truthy if all arguments are numbers, falsy otherwise
-| random min max | Outputs integer random number between `min` (inclusive) and `max` (exclusive) | truthy if all arguments are numbers, falsy otherwise
-
-### Module `str`
-
-| Function | Description | Status |
-| -------- | ----------- | ------ |
-| upper %args | Outputs `args` in uppercase | status `args`
-| lower %args | Outputs `args` in lowercase | status `args`
-| replace target from to | Outputs `target` with all occurrences of `from` replaced by `to` | status `target`
-| search target pattern | Outputs the lines of `target` that match the regular expression `pattern` | truthy if `pattern` is a valid regex, falsy otherwise
-| is_alpha %args | Outputs "" | truthy if every character of `args` is alphabetic, falsy otherwise
-| is_alphanumeric %args | Outputs "" | truthy if every character of `args` is alphanumeric, falsy otherwise
-
-### Module `net`
-
-| Function | Description | Status |
-| -------- | ----------- | ------ |
-| get url | Outputs the response of an HTTP GET request on `url` | the status code of the response, unless it was 200, in which case truthy
-| get url timeout | Outputs the response of an HTTP GET request on `url`, waiting for at most `timeout` seconds | the status code of the response, unless it was 200, in which case truthy
-| post url | Outputs the response of an HTTP POST request on `url` | the status code of the response, unless it was 200, in which case truthy
-| post url body | Outputs the response of an HTTP POST request on `url`, with body `body` | the status code of the response, unless it was 200, in which case truthy
-| post url body timeout | Outputs the response of an HTTP POST request on `url`, with body `body`, waiting for at most `timeout` seconds | the status code of the response, unless it was 200, in which case truthy
-
-### Module `json`
-
-| Function | Description | Status |
-| -------- | ----------- | ------ |
-| gron input | Outputs a flattened (grepabble) version of the JSON `input` | truthy if `input` is a valid JSON
+See [docs/embedding.md](docs/embedding.md) for module providers, native
+functions, limits and capabilities, and [docs/internals.md](docs/internals.md)
+for how it works inside. Coming from dog3? Read [MIGRATING.md](MIGRATING.md).

@@ -503,3 +503,9 @@ proptest! {
         let _ = parse(&src, SourceId(0), 32);
     }
 }
+
+#[test]
+fn embedded_commands_stay_on_one_line() {
+    assert_eq!(p("x = upper a b"), r#"(= x (call $upper "a" "b"))"#);
+    assert!(err("x = Hello\nfn hi () {}").contains("expected `;`"));
+}

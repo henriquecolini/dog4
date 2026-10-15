@@ -1,0 +1,29 @@
+// A tiny chat-bot command dispatcher: handlers live in a map of functions.
+_counts = [=];
+
+commands = [
+    roll = fn (args) {
+        sides = num($args[0] ?? 6);
+        put "rolled a $({ random 1 ($sides + 1) })"
+    },
+    count = fn (args) {
+        word = $args[0] ?? nothing;
+        _counts[$word] = ($_counts[$word] ?? 0) + 1;
+        put "$word: $_counts[$word]"
+    },
+    shout = fn (args) { put "$({ upper { join $args } })!!!" },
+    help = fn (args) { put "commands: $({ join { keys $commands } ", " })" },
+];
+
+fn handle (message: str) {
+    words = { split $message };
+    name = { replace ($words[0] ?? "") / "" };
+    handler = $commands[$name];
+    if (!$handler) { return "unknown command `$name`, try /help" };
+    put ($handler({ last $words ({ len $words } - 1) }))
+}
+
+for message in ["/help" "/roll 1" "/count dogs" "/count dogs" "/shout hello there" "/meow"] {
+    println "> $message";
+    println { handle $message };
+};

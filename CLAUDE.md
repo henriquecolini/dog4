@@ -4,31 +4,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`dog3` is an esoteric interpreted language (Rust + Bash flavored) written in Rust. The only data type is a string that carries a hidden integer **status code** (0 = truthy, anything else = falsy). Every statement "outputs" a string that is appended to its enclosing scope; a block `{ ... }` is a value whose content is everything output inside it. Output only reaches stdout if it bubbles up to the top-level program (or via `print`/`println`, which write directly). The README is the language reference.
+`dog4` is an esoteric, Bash-flavoured scripting language in Rust, the successor of dog3, built to be embedded and sandboxed (its main host is a Telegram bot running untrusted user code). Every statement *outputs* into its enclosing block and a block's value is the fold (`+`) of those outputs: numbers add, text/arrays concatenate, maps merge. `docs/language.md` is the precise reference; `docs/internals.md` explains the implementation; `docs/embedding.md` the Rust API.
 
 ## Commands
 
 ```sh
-cargo build                                  # build
-cargo run -- examples/hello.dog              # run a script
-cargo run -- a.dog b.dog                     # multiple files are concatenated with "\n" and parsed as one program
-cargo clippy                                 # lint
+cargo build
+cargo run -- file.dog            # run a script (FsProvider rooted at the file's directory)
+cargo run -- -e 'pln hi'         # run a snippet; no args = REPL; --disasm prints bytecode
+cargo test                       # everything (unit, golden scripts, docs, api, compile, robustness, doctests)
+cargo test --test scripts -- functions/closures   # one golden script (names are paths without .dog)
+BLESS=1 cargo test --test scripts                  # rewrite .out/.err expectations — then READ the diffs
+cargo test --test docs           # runs every ```dog block in README.md, MIGRATING.md, docs/*.md
+cargo clippy --all-targets --all-features -- -D warnings
+cargo bench --bench vm           # criterion benchmarks
 ```
-
-There is no test suite; the `.dog` files in `examples/` (especially `examples/features/`) serve as manual regression checks. When writing dog3 code (examples, README snippets), run it — common pitfalls: unquoted `,` `'` and other special chars are syntax errors, and a variable name extends to the next whitespace/special char (`$x!` is variable `x!`).
 
 ## Architecture
 
-Pipeline (`src/main.rs`): read files → register builtin libraries → `parser::parse` → register user `fn`s into the library → `Runtime::execute` → print final output value.
+source → `syntax/` (hand-written, scannerless parser; command mode vs expression mode is decided by which function is running) → `compile/` (resolves names to slots / cells / upvalues / globals / prelude, emits `Op`s, patches captured locals into cells in `FnState::finish`) → `vm/` (stack machine; extra stacks for block accumulators, iterators, loop records, try handlers; heap frames). Builtins live in `stdlib/`, registered through `Library::def(name, "dog4 param list", closure)`; natives get `%rest` args flat, scripts get an array. Modules come from a host `ModuleProvider` (`module/`); `runtime.rs` is the public API.
 
-- **Parser** (`src/parser/`): pest grammar in `grammar.pest`; `mod.rs` converts pest pairs into the AST types in `grammar.rs` via the `AST` trait (one `impl AST for X` per node). Adding syntax means touching all three. Note the `for` split form is `for x in $list split <sep> { ... }`. String literals become `FormatString` (`format_string.rs`), which pre-splits into raw and `$variable` regions; single-quoted strings don't expand variables.
-- **Runtime** (`src/runtime/mod.rs`): a tree-walking interpreter where every `execute_*` function returns a `Next` control-flow enum (`Proceed`, `Append`, `Return`, `Clear`, `Abort`). The `evaluate!`/`proceed!` macros propagate non-local control flow; `scoped!` pushes/pops a scope. Bare blocks/control statements used as statements are `.supress()`ed (their output is discarded) — this is what makes `{ pln hi }` print nothing while `put { pln hi }` does.
-- **Scopes** (`scope.rs`): `ScopeStack` over a global `HashMap`. `set_var` writes to the nearest scope that already has the variable (else the innermost); `declare_var` always writes to the innermost. Function calls get a fresh `call_frame` that only shares globals.
-- **Output** (`output.rs`): the string+status value type; numeric parsing is cached lazily (`lazy.rs`).
-- **Functions** (`functions.rs`): `FunctionLibrary` maps name → overloads, selected by argument count (`min_args..=max_args`; a trailing `%arg` makes it variadic and joins the rest with spaces). A new overload whose arg range collides with an existing one replaces it; user scripts may not overload builtins (`RegisterError::OverloadBuiltin`). User functions keep their source text so `src <name>` can print it.
+## Gotchas when writing dog4 code (tests, docs, examples)
 
-## Adding builtins
+- A bare block or control statement (`{ … }`, `if`, `for`, `while`) used as a *statement* has its value discarded — `{ if c { pln x } }` prints nothing. Use `put if …`, or `x = for …` (the right side of `=` is an expression).
+- Newlines don't separate statements; `;` is required after commands and assignments.
+- Bare words are text, except exact numbers/bools (`5`, `true`; not `007`, not `null`). In expressions, bare identifiers are strings unless called (`f(x)`) or followed by arguments on the same line (`(len $x)`).
+- `$name.txt` is a field access; write `${name}.txt`.
+- Always run new dog4 snippets; the doc and golden tests will catch drift. After `BLESS=1`, review every changed expectation — never bless blindly.
 
-Each module in `src/builtin/` exposes `pub fn build() -> FunctionLibrary`. Builtins have signature `fn(&FunctionLibrary, &[Output]) -> Result<Output, ExecutionError>` and are registered with the `builtin!(library, func, "arg1", "%rest")` macro (or `builtin_alias!` to register under a different name). Register the same Rust fn multiple times with different arities for overloads, then match on the `args` slice length inside it. A new module must be added to `src/builtin/mod.rs` and merged in `register_libraries` in `src/main.rs`. Report bad input through the returned status code (e.g. `Output::new_falsy()`), not `Err`. Document new functions in the module tables in `README.md`.
+## Conventions
 
-`std::eval` re-parses a string and runs it in a fresh `Runtime` with a clone of the current library; `std::src` prints function source (builtins show as `// built-in` stubs).
+- Every language change needs: a golden script in `tests/scripts/<area>/`, docs in `docs/language.md` (with a runnable example), and a note in `MIGRATING.md` if dog3 behaviour changes.
+- The dog3 fixtures (`tests/dog3/*.out`) are dog3's real output and are never rewritten; intended differences go in `.dog4.out`/`.dog4.err` plus `tests/dog3/EXPECTED_DIFFERENCES.md`.
+- Untrusted input must never panic: no `unwrap` on user-reachable paths, size checks before allocating (`Meter::str_len` / `coll_len`), and new natives that loop or copy should charge fuel.
+- The approved design lives in the plan the project started from; ask before changing core semantics (fold rules, scoping rule, discard rule, bare-literal rule).

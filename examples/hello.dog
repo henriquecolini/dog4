@@ -1,0 +1,4 @@
+// The smallest dog4 program, and what blocks do with output.
+pln Hello, world!;
+{ pln "captured by the block, never printed" };
+put { pln "a block is a value, so it can be put" };

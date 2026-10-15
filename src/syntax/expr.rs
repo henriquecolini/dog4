@@ -251,15 +251,20 @@ impl Parser<'_> {
         self.glue_tail(lit, start)
     }
 
-    /// Whether whitespace and then a command argument follow, making the word
-    /// before it a command: `(len $list)`, `x = upper hello`, `(abs -3)`.
-    /// An operator (`a - b`) or a closing bracket means it isn't one.
+    /// Whether whitespace and then a command argument follow on the same line,
+    /// making the word before it a command: `(len $list)`, `x = upper hello`,
+    /// `(abs -3)`. An operator (`a - b`), a closing bracket or a line break
+    /// means it isn't one (so a forgotten `;` stays a clear error).
     fn command_follows(&mut self) -> Result<bool> {
         let save = self.pos;
         if !self.peek().is_some_and(char::is_whitespace) {
             return Ok(false);
         }
         self.skip_trivia()?;
+        if self.src[save..self.pos].contains('\n') {
+            self.pos = save;
+            return Ok(false);
+        }
         let follows = match self.peek() {
             None | Some(')' | ']' | '}' | ';' | ',') => false,
             Some('-') => self

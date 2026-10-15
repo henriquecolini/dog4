@@ -1,0 +1,12 @@
+> /help
+commands: roll, count, shout, help
+> /roll 1
+rolled a 1
+> /count dogs
+dogs: 1
+> /count dogs
+dogs: 2
+> /shout hello there
+HELLO THERE!!!
+> /meow
+unknown command `meow`, try /help

@@ -1,5 +1,5 @@
-//! Golden-file tests: every `tests/scripts/**/*.dog` and `tests/dog3/*.dog` file
-//! is one test.
+//! Golden-file tests: every `tests/scripts/**/*.dog`, `tests/dog3/*.dog` and
+//! `examples/*.dog` file is one test.
 //!
 //! A script's result is everything it printed followed by its final output.
 //! It must equal the sibling `.out` file, or, if the script fails, the error
@@ -26,7 +26,7 @@ fn main() {
     let args = Arguments::from_args();
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
     let mut trials = Vec::new();
-    for dir in ["scripts", "dog3"] {
+    for dir in ["scripts", "dog3", "../examples"] {
         let mut files = Vec::new();
         collect(&root.join(dir), &mut files);
         files.sort();
