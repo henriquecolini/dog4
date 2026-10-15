@@ -819,7 +819,7 @@ impl Vm {
                 Op::ArrPush => {
                     let v = self.pop();
                     if let Some(Value::Arr(items)) = self.stack.last_mut() {
-                        t!(self.meter.coll_len(items.len() + 1));
+                        t!(self.meter.grow_coll(items.len() + 1, 1));
                         items.make_mut().push(v);
                     }
                 }
@@ -835,7 +835,7 @@ impl Vm {
                         },
                     };
                     if let Some(Value::Arr(items)) = self.stack.last_mut() {
-                        t!(self.meter.coll_len(items.len() + more.len()));
+                        t!(self.meter.grow_coll(items.len() + more.len(), more.len()));
                         items.make_mut().extend(more.into_vec());
                     }
                 }

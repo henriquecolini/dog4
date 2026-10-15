@@ -158,6 +158,26 @@ impl Meter {
         self.tick(len as u64 / 64)
     }
 
+    /// Checks that a string may grow to `total` bytes and pays for the `added`
+    /// bytes written (appending in place doesn't copy what was already there).
+    #[inline]
+    pub fn grow_str(&mut self, total: usize, added: usize) -> Result<()> {
+        if total > self.max_str {
+            return Err(Error::limit(Limit::StrSize));
+        }
+        self.tick(added as u64 / 64)
+    }
+
+    /// Checks that a collection may grow to `total` elements and pays for the
+    /// `added` ones.
+    #[inline]
+    pub fn grow_coll(&mut self, total: usize, added: usize) -> Result<()> {
+        if total > self.max_len {
+            return Err(Error::limit(Limit::CollectionSize));
+        }
+        self.tick(added as u64 / 64)
+    }
+
     /// Pays for printing `bytes` bytes.
     pub fn output(&mut self, bytes: usize) -> Result<()> {
         if bytes > self.output_left {

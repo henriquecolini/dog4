@@ -1,0 +1,6 @@
+// limits: sandbox
+// Building a big collection costs fuel in proportion to its size, not its
+// size squared: this fits comfortably in the sandbox's fuel budget.
+xs = for i in (0..50000) { put [$i] };
+s = for i in (0..50000) { put x };
+pln { len $xs } { strlen $s };

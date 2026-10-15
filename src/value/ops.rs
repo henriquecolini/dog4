@@ -36,7 +36,7 @@ pub fn add_assign(acc: &mut Value, rhs: Value, meter: &mut Meter) -> Result<()> 
             *left = Value::num(left.as_f64().unwrap_or(0.0) + right.as_f64().unwrap_or(0.0));
         }
         (Value::Str(a), Value::Str(b)) => {
-            meter.str_len(a.len() + b.len())?;
+            meter.grow_str(a.len() + b.len(), b.len())?;
             if a.is_empty() {
                 *a = b;
             } else {
@@ -45,11 +45,11 @@ pub fn add_assign(acc: &mut Value, rhs: Value, meter: &mut Meter) -> Result<()> 
         }
         (Value::Str(a), b @ (Value::Int(_) | Value::Float(_) | Value::Bool(_))) => {
             let text = b.to_string();
-            meter.str_len(a.len() + text.len())?;
+            meter.grow_str(a.len() + text.len(), text.len())?;
             Rc::make_mut(a).push_str(&text);
         }
         (Value::Arr(a), Value::Arr(b)) => {
-            meter.coll_len(a.len() + b.len())?;
+            meter.grow_coll(a.len() + b.len(), b.len())?;
             if a.is_empty() {
                 *a = b;
             } else {
@@ -57,11 +57,11 @@ pub fn add_assign(acc: &mut Value, rhs: Value, meter: &mut Meter) -> Result<()> 
             }
         }
         (Value::Arr(a), b) => {
-            meter.coll_len(a.len() + 1)?;
+            meter.grow_coll(a.len() + 1, 1)?;
             a.make_mut().push(b);
         }
         (Value::Map(a), Value::Map(b)) => {
-            meter.coll_len(a.len() + b.len())?;
+            meter.grow_coll(a.len() + b.len(), b.len())?;
             if a.is_empty() {
                 *a = b;
             } else {
@@ -360,7 +360,7 @@ fn child_mut<'a>(place: &'a mut Value, key: &Value, meter: &mut Meter) -> Result
             let key = key_text(key);
             let map = obj.make_mut();
             if !map.contains_key(&key) {
-                meter.coll_len(map.len() + 1)?;
+                meter.grow_coll(map.len() + 1, 1)?;
             }
             Ok(map.entry(key).or_default())
         }
@@ -374,7 +374,7 @@ fn child_mut<'a>(place: &'a mut Value, key: &Value, meter: &mut Meter) -> Result
             let items = arr.make_mut();
             let len = items.len();
             if i == len as i64 {
-                meter.coll_len(len + 1)?;
+                meter.grow_coll(len + 1, 1)?;
                 items.push(Value::Null);
                 return Ok(&mut items[len]);
             }

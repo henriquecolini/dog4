@@ -112,10 +112,7 @@ impl Builder {
             names.get("put")
         });
         let output = self.output.unwrap_or_else(|| Box::new(std::io::stdout()));
-        let rng = match self.seed {
-            Some(seed) => SmallRng::seed_from_u64(seed),
-            None => SmallRng::from_entropy(),
-        };
+        let rng = SmallRng::seed_from_u64(self.seed.unwrap_or_else(random_seed));
         let mut vm = Vm::new(self.limits, prelude, names, output, rng);
         vm.provider = self.provider;
         vm.native_modules = self.modules.into_iter().collect();
@@ -215,6 +212,16 @@ impl Runtime {
         });
         self.finish(result.map(|proto| disassemble(&proto)))
     }
+}
+
+/// A seed from the standard library's per-process hash randomness. This avoids
+/// a dependency on OS entropy APIs, so dog4 also builds for WebAssembly
+/// (where hosts should pass their own seed with [`Builder::seed`]).
+fn random_seed() -> u64 {
+    use std::hash::{BuildHasher, Hasher};
+    let mut hasher = std::collections::hash_map::RandomState::new().build_hasher();
+    hasher.write_usize(&hasher as *const _ as usize);
+    hasher.finish()
 }
 
 /// An in-memory output sink, cheap to clone, for capturing `print` output.
