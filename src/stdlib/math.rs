@@ -11,16 +11,17 @@ use crate::vm::Vm;
 /// Folds `first` and every number in `rest` with `op`, left to right.
 fn fold(args: &[Value], op: fn(&Value, &Value) -> Result<Value>) -> Result<Value> {
     let mut acc = args[0].clone();
-    for x in items(&args[1]) {
+    for x in &args[1..] {
         acc = op(&acc, x)?;
     }
     Ok(acc)
 }
 
 fn add(vm: &mut Vm, args: &mut [Value]) -> Result<Value> {
-    let mut acc = std::mem::take(&mut args[0]);
-    for x in take_items(&mut args[1]) {
-        value::add_assign(&mut acc, x, vm.meter())?;
+    let (first, rest) = args.split_at_mut(1);
+    let mut acc = std::mem::take(&mut first[0]);
+    for x in rest {
+        value::add_assign(&mut acc, std::mem::take(x), vm.meter())?;
     }
     Ok(acc)
 }
@@ -36,7 +37,7 @@ pub(super) fn install(lib: &mut Library) {
     });
     lib.def("mul", "first: num, %rest: num", |vm, args| {
         let mut acc = args[0].clone();
-        for x in items(&args[1]) {
+        for x in &args[1..] {
             acc = value::mul(&acc, x, vm.meter())?;
         }
         Ok(acc)
@@ -45,17 +46,11 @@ pub(super) fn install(lib: &mut Library) {
         fold(args, value::div)
     });
     lib.def("max", "first: num, %rest: num", |_, args| {
-        let best = items(&args[1])
-            .iter()
-            .map(num)
-            .fold(num(&args[0]), f64::max);
+        let best = args[1..].iter().map(num).fold(num(&args[0]), f64::max);
         Ok(Value::num(best))
     });
     lib.def("min", "first: num, %rest: num", |_, args| {
-        let best = items(&args[1])
-            .iter()
-            .map(num)
-            .fold(num(&args[0]), f64::min);
+        let best = args[1..].iter().map(num).fold(num(&args[0]), f64::min);
         Ok(Value::num(best))
     });
     lib.def("floor", "x: num", unary(f64::floor));

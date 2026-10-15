@@ -74,7 +74,8 @@ impl Library {
         f: impl Fn(&mut Vm, &mut [Value]) -> Result<Value> + 'static,
     ) -> &mut Library {
         let sig = parse_signature(params)
-            .unwrap_or_else(|e| panic!("bad signature for `{name}`: {}", e.message()));
+            .unwrap_or_else(|e| panic!("bad signature for `{name}`: {}", e.message()))
+            .unpacked_rest();
         let overload = Overload {
             sig: Rc::new(sig),
             body: Body::Native(Rc::new(f)),
@@ -155,7 +156,7 @@ pub(crate) fn text(value: &Value) -> &str {
     value.as_str().unwrap_or("")
 }
 
-/// The items of a (coerced) `arr` argument (also used for `%rest` arguments).
+/// The items of a (coerced) `arr` argument.
 pub(crate) fn items(value: &Value) -> &[Value] {
     match value {
         Value::Arr(items) => items,

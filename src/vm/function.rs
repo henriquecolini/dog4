@@ -10,7 +10,8 @@ use crate::error::Result;
 use crate::value::{Type, Value};
 
 /// A native function. It receives the (already coerced) arguments and may take
-/// them out of the slice. A `%rest` parameter arrives as one array.
+/// them out of the slice. Arguments matching a `%rest` parameter follow the
+/// positional ones individually (script functions get them as one array).
 pub type NativeFn = Rc<dyn Fn(&mut Vm, &mut [Value]) -> Result<Value>>;
 
 /// One parameter of a signature.
@@ -31,19 +32,41 @@ pub struct Signature {
     pub params: Vec<SigParam>,
     /// The `%rest` parameter, collecting any further arguments into an array.
     pub rest: Option<SigParam>,
-    /// No types, references or rest: arguments pass through untouched.
+    /// Whether `%rest` arguments are collected into one array (script
+    /// functions) or passed individually (natives).
+    pub(crate) pack_rest: bool,
+    /// Arguments pass through untouched: no types or references, and no rest
+    /// array to build.
     pub(crate) simple: bool,
 }
 
 impl Signature {
     /// Creates a signature.
     pub fn new(params: Vec<SigParam>, rest: Option<SigParam>) -> Signature {
-        let simple = rest.is_none() && params.iter().all(|p| p.ty == Type::ANY && !p.by_ref);
-        Signature {
+        let mut sig = Signature {
             params,
             rest,
-            simple,
-        }
+            pack_rest: true,
+            simple: false,
+        };
+        sig.simple = sig.compute_simple();
+        sig
+    }
+
+    /// The same signature, passing `%rest` arguments individually (for natives).
+    pub fn unpacked_rest(mut self) -> Signature {
+        self.pack_rest = false;
+        self.simple = self.compute_simple();
+        self
+    }
+
+    fn compute_simple(&self) -> bool {
+        let plain = |p: &SigParam| p.ty == Type::ANY && !p.by_ref;
+        self.params.iter().all(plain)
+            && match &self.rest {
+                None => true,
+                Some(rest) => !self.pack_rest && plain(rest),
+            }
     }
 
     /// Whether `n` arguments are acceptable.
@@ -161,7 +184,8 @@ impl Value {
         f: impl Fn(&mut Vm, &mut [Value]) -> Result<Value> + 'static,
     ) -> Value {
         let sig = parse_signature(params)
-            .unwrap_or_else(|e| panic!("bad signature for native `{name}`: {}", e.message()));
+            .unwrap_or_else(|e| panic!("bad signature for native `{name}`: {}", e.message()))
+            .unpacked_rest();
         Value::Func(Rc::new(Function::native(name, sig, Rc::new(f))))
     }
 }
@@ -193,6 +217,9 @@ mod tests {
         );
         assert!(!sig.simple);
         assert!(parse_signature("a, b").unwrap().simple);
+        assert!(!parse_signature("%r").unwrap().simple);
+        assert!(parse_signature("%r").unwrap().unpacked_rest().simple);
+        assert!(!parse_signature("%r: num").unwrap().unpacked_rest().simple);
         assert!(parse_signature("a: wat").is_err());
         assert!(parse_signature("%a, b").is_err());
     }

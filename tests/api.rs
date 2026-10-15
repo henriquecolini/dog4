@@ -68,10 +68,7 @@ fn native_modules_with_host_state() {
     let log = sent.clone();
     let mut telegram = Library::new();
     telegram.def("send", "chat: num, %text", move |_, args| {
-        let text: Vec<String> = match &args[1] {
-            Value::Arr(items) => items.iter().map(|v| v.to_string()).collect(),
-            _ => Vec::new(),
-        };
+        let text: Vec<String> = args[1..].iter().map(|v| v.to_string()).collect();
         log.borrow_mut()
             .push(format!("{}: {}", args[0], text.join(" ")));
         Ok(Value::Null)

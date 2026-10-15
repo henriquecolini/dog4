@@ -1,6 +1,6 @@
 //! Calling functions: overload selection, coercion, and `%rest` collection.
 
-use super::{Body, FrameKind, Function, Signature, Vm};
+use super::{Body, FrameKind, Function, SigParam, Signature, Vm};
 use crate::error::{Error, ErrorKind, Result};
 use crate::limits::Meter;
 use crate::value::{Value, can_coerce, coerce, with_article};
@@ -35,7 +35,13 @@ impl Vm {
         let args_at = callee_at + 1;
         let index = select(&function, &self.stack[args_at..])?;
         let overload = &function.overloads[index];
-        prepare_args(&overload.sig, &mut self.stack, args_at, &mut self.meter)?;
+        prepare_args(
+            &function.name,
+            &overload.sig,
+            &mut self.stack,
+            args_at,
+            &mut self.meter,
+        )?;
         match &overload.body {
             Body::Script(script) => {
                 let script = script.clone();
@@ -65,13 +71,8 @@ fn select(function: &Function, args: &[Value]) -> Result<usize> {
         if !only.sig.accepts(n) {
             return Err(arity_error(function, n));
         }
-        if only.sig.simple {
-            return Ok(0);
-        }
-        return match fit(&function.name, &only.sig, args) {
-            Fit::Exact | Fit::Coerced => Ok(0),
-            Fit::No(err) => Err(err),
-        };
+        // With one candidate, `prepare_args` does the checking.
+        return Ok(0);
     }
     let mut coerced = None;
     let mut candidates = Vec::new();
@@ -204,8 +205,12 @@ fn fit(name: &str, sig: &Signature, args: &[Value]) -> Fit {
     if exact { Fit::Exact } else { Fit::Coerced }
 }
 
-/// Dereferences, coerces and collects the arguments in place for `sig`.
+/// Dereferences, checks, coerces and collects the arguments in place for `sig`.
+///
+/// This is also where a single-overload call finds out its arguments don't fit,
+/// so the errors match the ones overload selection reports.
 fn prepare_args(
+    name: &str,
     sig: &Signature,
     stack: &mut Vec<Value>,
     at: usize,
@@ -220,34 +225,59 @@ fn prepare_args(
         return Ok(());
     }
     for (i, param) in sig.params.iter().enumerate() {
-        let slot = &mut stack[at + i];
-        if param.by_ref {
-            continue;
-        }
-        if let Value::Ref(r) = slot {
-            *slot = r.read()?;
-        }
-        if !param.ty.contains(slot) {
-            let value = std::mem::take(slot);
-            *slot = coerce(value, param.ty).map_err(|v| {
-                Error::type_error(format!("can't convert {} to {}", v.describe(), param.ty))
-            })?;
-        }
+        convert(name, param, &mut stack[at + i])?;
     }
-    if let Some(rest) = &sig.rest {
-        let extra: Vec<Value> = stack.drain(at + sig.params.len()..).collect();
-        meter.coll_len(extra.len())?;
-        let mut items = Vec::with_capacity(extra.len());
-        for value in extra {
-            let value = match value {
-                Value::Ref(r) => r.read()?,
-                other => other,
-            };
-            items.push(coerce(value, rest.ty).map_err(|v| {
-                Error::type_error(format!("can't convert {} to {}", v.describe(), rest.ty))
-            })?);
+    let Some(rest) = &sig.rest else {
+        return Ok(());
+    };
+    if !sig.pack_rest {
+        for slot in &mut stack[at + sig.params.len()..] {
+            convert(name, rest, slot)?;
         }
-        stack.push(Value::arr(items));
+        return Ok(());
+    }
+    let mut items: Vec<Value> = stack.drain(at + sig.params.len()..).collect();
+    meter.coll_len(items.len())?;
+    for item in &mut items {
+        convert(name, rest, item)?;
+    }
+    stack.push(Value::arr(items));
+    Ok(())
+}
+
+/// Makes one argument acceptable for `param`, or explains why it isn't.
+fn convert(name: &str, param: &SigParam, slot: &mut Value) -> Result<()> {
+    if param.by_ref {
+        let Value::Ref(r) = slot else {
+            return Err(Error::type_error(format!(
+                "`{}` of `{name}` is a reference parameter; pass `&variable`",
+                param.name
+            )));
+        };
+        let current = r.read()?;
+        if !param.ty.contains(&current) {
+            return Err(Error::type_error(format!(
+                "`{name}` expects a reference to {} for `{}`, got one to {}",
+                with_article(&param.ty.to_string()),
+                param.name,
+                current.describe()
+            )));
+        }
+        return Ok(());
+    }
+    if let Value::Ref(r) = slot {
+        *slot = r.read()?;
+    }
+    if !param.ty.contains(slot) {
+        let value = std::mem::take(slot);
+        *slot = coerce(value, param.ty).map_err(|v| {
+            Error::type_error(format!(
+                "`{name}` expects {} for `{}`, got {}",
+                with_article(&param.ty.to_string()),
+                param.name,
+                v.describe()
+            ))
+        })?;
     }
     Ok(())
 }

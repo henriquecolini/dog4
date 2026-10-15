@@ -1,13 +1,13 @@
 //! Output, conversions, errors and introspection.
 
-use super::{Library, checked_str, items, join_display};
+use super::{Library, checked_str, join_display};
 use crate::error::Error;
 use crate::value::Value;
 
 pub(super) fn install(lib: &mut Library) {
     // `put x` outputs x as is; `put a b c` outputs their text joined by spaces.
     lib.def("put", "%args", |vm, args| {
-        let values = items(&args[0]);
+        let values = &args[..];
         match values {
             [] => Ok(Value::Null),
             [one] => Ok(one.clone()),
@@ -15,7 +15,7 @@ pub(super) fn install(lib: &mut Library) {
         }
     });
     lib.def("pln", "%args", |vm, args| {
-        let mut line = join_display(items(&args[0]), " ");
+        let mut line = join_display(&args[..], " ");
         line.push('\n');
         checked_str(vm, line)
     });
@@ -58,7 +58,7 @@ pub(super) fn install(lib: &mut Library) {
         Ok(Value::str(function.source()))
     });
     lib.def("fail", "%message", |_, args| {
-        Err(match items(&args[0]) {
+        Err(match &args[..] {
             [one] => Error::thrown(one.clone()),
             many => Error::thrown(Value::str(join_display(many, " "))),
         })
@@ -74,22 +74,19 @@ pub(super) fn install(lib: &mut Library) {
         if args[0].truthy() {
             Ok(Value::Null)
         } else {
-            Err(Error::thrown(Value::str(join_display(
-                items(&args[1]),
-                " ",
-            ))))
+            Err(Error::thrown(Value::str(join_display(&args[1..], " "))))
         }
     });
 }
 
 pub(super) fn install_print(lib: &mut Library) {
     lib.def("print", "%args", |vm, args| {
-        let line = join_display(items(&args[0]), " ");
+        let line = join_display(&args[..], " ");
         vm.print(&line)?;
         Ok(Value::Null)
     });
     lib.def("println", "%args", |vm, args| {
-        let mut line = join_display(items(&args[0]), " ");
+        let mut line = join_display(&args[..], " ");
         line.push('\n');
         vm.print(&line)?;
         Ok(Value::Null)

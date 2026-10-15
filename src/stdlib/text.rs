@@ -2,7 +2,7 @@
 
 use regex::{Regex, RegexBuilder};
 
-use super::{Library, checked_str, items, join_display, text};
+use super::{Library, checked_str, join_display, text};
 use crate::error::{Error, Result};
 use crate::value::Value;
 
@@ -21,10 +21,10 @@ fn regex(pattern: &str) -> Result<Regex> {
 
 pub(super) fn install(lib: &mut Library) {
     lib.def("upper", "%args", |vm, args| {
-        checked_str(vm, join_display(items(&args[0]), " ").to_uppercase())
+        checked_str(vm, join_display(args, " ").to_uppercase())
     });
     lib.def("lower", "%args", |vm, args| {
-        checked_str(vm, join_display(items(&args[0]), " ").to_lowercase())
+        checked_str(vm, join_display(args, " ").to_lowercase())
     });
     lib.def("trim", "text: str", |_, args| {
         Ok(Value::str(text(&args[0]).trim()))
@@ -64,13 +64,13 @@ pub(super) fn install(lib: &mut Library) {
         Ok(Value::Bool(regex(text(&args[1]))?.is_match(text(&args[0]))))
     });
     lib.def("is_alpha", "%args", |_, args| {
-        let all = items(&args[0])
+        let all = args
             .iter()
             .all(|v| v.to_string().chars().all(char::is_alphabetic));
         Ok(Value::Bool(all))
     });
     lib.def("is_alphanumeric", "%args", |_, args| {
-        let all = items(&args[0])
+        let all = args
             .iter()
             .all(|v| v.to_string().chars().all(char::is_alphanumeric));
         Ok(Value::Bool(all))
