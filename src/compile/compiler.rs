@@ -629,6 +629,18 @@ impl Compiler<'_> {
 
     fn assign(&mut self, target: &Place, op: UpdateOp, value: &Expr) -> Result<()> {
         if target.path.is_empty() && op == UpdateOp::Set {
+            if let ExprKind::Lambda(decl) = &value.kind {
+                if self.resolve_var(&target.root).is_none() && !self.at_module_top() {
+                    // `f = fn () { … $f … }`: the name is visible inside its own
+                    // body, so lambdas can be recursive.
+                    let slot = self.new_slot(&target.root)?;
+                    let at = self.emit(Op::Nop);
+                    self.f().hoists.push((slot, at));
+                    self.function(decl)?;
+                    self.emit(Op::StoreLocal(slot));
+                    return Ok(());
+                }
+            }
             self.expr(value)?;
             match self.resolve_var(&target.root) {
                 Some(var) => self.store_var(var),

@@ -1,0 +1,8 @@
+fn countdown_list (n: num) {
+    go = fn (k) { put (if ($k == 0) { put [liftoff] } else { put ([$k] + go($k - 1)) }) };
+    put ($go($n))
+}
+pln { countdown_list 3 };
+// The assignment rule still sees outer names first for other values.
+fn f () { len = { len [a b] }; put $len }
+pln { f };
