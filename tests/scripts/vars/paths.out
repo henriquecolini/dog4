@@ -1,4 +1,4 @@
-{"name": "Bia", "langs": ["c", "dog"], "age": 30, "address": {"city": "Lisbon"}}
-[10, 2, 30, 4]
-[10, 2, 30, 4] ["changed", 2, 30, 4]
-{"made": "map"}
+[name = Bia, langs = [c dog], age = 30, address = [city = Lisbon]]
+[10 2 30 4]
+[10 2 30 4] [changed 2 30 4]
+[made = map]

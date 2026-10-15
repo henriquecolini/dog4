@@ -196,17 +196,22 @@ fn truthiness() {
 fn display_and_repr() {
     assert_eq!(s("hi").to_string(), "hi");
     assert_eq!(Value::Null.to_string(), "");
-    assert_eq!(Value::Null.repr(), "null");
+    assert_eq!(Value::Null.repr(), "(null)");
+    assert_eq!(Value::num(f64::INFINITY).to_string(), "inf");
+    assert_eq!(
+        arr(&[Value::num(f64::INFINITY), Value::num(f64::NAN)]).to_string(),
+        "[(1 / 0) (0 / 0)]"
+    );
     assert_eq!(Value::num(0.1 + 0.2).to_string(), "0.30000000000000004");
     assert_eq!(Value::num(1e21).to_string(), "1e21");
     assert_eq!(Value::num(-2.5).to_string(), "-2.5");
     assert_eq!(
-        arr(&[s("a"), Value::Int(1), Value::Null, s("q\"\n")]).to_string(),
-        r#"["a", 1, null, "q\"\n"]"#
+        arr(&[s("a"), Value::Int(1), Value::Null, s("q\"\n$")]).to_string(),
+        r#"[a 1 (null) "q\"\n\$"]"#
     );
     assert_eq!(
-        map(&[("k", arr(&[])), ("x", map(&[]))]).to_string(),
-        r#"{"k": [], "x": {}}"#
+        map(&[("k", arr(&[])), ("x", map(&[])), ("two words", s("5"))]).to_string(),
+        r#"[k = [], x = [=], "two words" = "5"]"#
     );
 }
 
@@ -383,10 +388,7 @@ fn range_values() {
 #[test]
 fn json_round_trip_and_errors() {
     let v = parse_json(r#"{"a": [1, 2.5, "x", null, true], "b": {}}"#).unwrap();
-    assert_eq!(
-        v.to_string(),
-        r#"{"a": [1, 2.5, "x", null, true], "b": {}}"#
-    );
+    assert_eq!(v.to_string(), "[a = [1 2.5 x (null) true], b = [=]]");
     let json = to_json(&v).unwrap();
     assert_eq!(from_json(json), v);
     assert!(parse_json("{").is_err());
@@ -458,9 +460,14 @@ proptest! {
         prop_assert_eq!(back, v);
     }
 
+    /// What dog4 prints is dog4: evaluating a value's printed form gives the
+    /// same value back.
     #[test]
-    fn repr_parses_as_the_same_json(v in json_value()) {
-        prop_assert_eq!(parse_json(&v.repr()).unwrap(), v);
+    fn repr_reads_back_as_the_same_value(v in json_value()) {
+        let source = format!("put {}", v.repr());
+        let back = crate::Runtime::new().run("repr", &source);
+        prop_assert!(back.is_ok(), "{} didn't parse: {:?}", source, back.err());
+        prop_assert_eq!(back.unwrap(), v, "printed as {}", source);
     }
 
     #[test]

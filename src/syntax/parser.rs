@@ -221,6 +221,17 @@ impl<'a> Parser<'a> {
         self.starts_with(word) && !self.src[self.pos + word.len()..].starts_with(is_ident_char)
     }
 
+    /// Like [`at_keyword`](Self::at_keyword), for keywords that start a value
+    /// (`if`, `for`, `fn`, …): they must be followed by a space or the start of
+    /// another value, so words like `if?` or `for:` stay plain text.
+    pub(super) fn at_form_keyword(&self, word: &str) -> bool {
+        self.at_keyword(word)
+            && match self.src[self.pos + word.len()..].chars().next() {
+                None => true,
+                Some(c) => c.is_whitespace() || matches!(c, '(' | '{' | '[' | '$' | '"' | '\''),
+            }
+    }
+
     fn peek_ident(&self) -> Option<&'a str> {
         let rest = &self.src[self.pos..];
         if !rest.starts_with(is_ident_start) {
@@ -680,11 +691,11 @@ impl<'a> Parser<'a> {
             Some('(') => self.paren()?,
             _ => {
                 for word in ["if", "while", "for", "try"] {
-                    if self.at_keyword(word) {
+                    if self.at_form_keyword(word) {
                         return self.control(mode);
                     }
                 }
-                if self.at_keyword("fn") {
+                if self.at_form_keyword("fn") {
                     return self.lambda_expr();
                 }
                 return self.word(mode);
@@ -976,7 +987,7 @@ impl<'a> Parser<'a> {
             }
         }
         if plain && pieces.is_empty() && mode != WordMode::Expr {
-            if let Some(value) = bare_literal(&text) {
+            if let Some(value) = crate::value::bare_literal(&text) {
                 return Ok(Expr::new(ExprKind::Lit(value), self.span_from(start)));
             }
         }
@@ -1175,23 +1186,6 @@ pub(super) fn place_to_expr(place: Place) -> Expr {
     }
     expr.span = place.span;
     expr
-}
-
-/// A bare word that reads exactly like a number or a bool *is* one: `5`, `-2.5`,
-/// `true`. The rule is lossless — the value prints back as the same text — so
-/// `007`, `1.50` and `1e3` stay text.
-fn bare_literal(text: &str) -> Option<Value> {
-    match text {
-        "true" => return Some(Value::Bool(true)),
-        "false" => return Some(Value::Bool(false)),
-        _ => {}
-    }
-    let digits = text.strip_prefix('-').unwrap_or(text);
-    if !digits.starts_with(|c: char| c.is_ascii_digit()) {
-        return None;
-    }
-    let value = crate::value::parse_num(text)?;
-    (value.to_string() == text).then_some(value)
 }
 
 /// Statements that must be followed by `;` (or end their block).

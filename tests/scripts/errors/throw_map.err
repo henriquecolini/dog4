@@ -1,4 +1,4 @@
-error: {"code": 404, "reason": "not found"}
+error: [code = 404, reason = "not found"]
  --> throw_map:1:1
   |
 1 | throw [code = 404, reason = "not found"];

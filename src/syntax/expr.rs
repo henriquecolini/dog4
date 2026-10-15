@@ -186,14 +186,14 @@ impl Parser<'_> {
     fn ident_atom(&mut self) -> Result<Expr> {
         let start = self.pos;
         for word in ["if", "while", "for", "try"] {
-            if self.at_keyword(word) {
+            if self.at_form_keyword(word) {
                 return self.control(WordMode::Command);
             }
         }
-        if self.at_keyword("fn") {
+        if self.at_form_keyword("fn") {
             return self.lambda_expr();
         }
-        if self.at_keyword("use") {
+        if self.at_form_keyword("use") {
             self.pos += 3;
             self.skip_trivia()?;
             let name = self.value(WordMode::Command)?;

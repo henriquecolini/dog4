@@ -6,10 +6,10 @@
 - ideal
 - for
 - csv
-["a", "b", "c"]
+[a b c]
 
 60
 0:a 1:b 2:c 
-["one", "two"] {"1": "one", "2": "two"}
+[one two] [1 = one, 2 = two]
  ["null"]
  null

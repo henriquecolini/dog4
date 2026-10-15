@@ -21,7 +21,7 @@ fn write_proto(proto: &Proto, out: &mut String, indent: &str) {
         let _ = write!(out, "{indent}  {i:4}  ");
         match *op {
             Op::Const(c) | Op::GetField(c) => {
-                let _ = write!(out, "{op:?}  ; {}", proto.consts[c as usize].repr());
+                let _ = write!(out, "{op:?}  ; {}", proto.consts[c as usize].quoted_repr());
             }
             Op::Jump(o)
             | Op::JumpIfFalse(o)

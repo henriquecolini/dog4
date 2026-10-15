@@ -110,8 +110,8 @@ pln $user $user.name $user.tags[0] $user.missing;
 pln { type $items } { type $user } { type (null) } { type $pln }
 ```
 ```text
-["apple", "banana", "passion fruit"] apple passion fruit 3
-{"name": "Ana", "age": 30, "tags": ["admin"]} Ana admin 
+[apple banana "passion fruit"] apple passion fruit 3
+[name = Ana, age = 30, tags = [admin]] Ana admin 
 arr map null fn
 ```
 
@@ -132,8 +132,8 @@ pln { put score: ; put 10 }
 ```
 ```text
 6
-["a", "b"]
-{"x": 1, "y": 2}
+[a b]
+[x = 1, y = 2]
 false
 score:10
 ```
@@ -146,7 +146,7 @@ same operation as `+`:
 pln ([1 2] + [3]) ("hi" + 5) ([a = 1] + [b = 2]) (null + 7)
 ```
 ```text
-[1, 2, 3] hi5 {"a": 1, "b": 2} 7
+[1 2 3] hi5 [a = 1, b = 2] 7
 ```
 
 Which makes loops into folds:
@@ -158,7 +158,7 @@ doubled = for p in $prices { put [($p * 2)] };
 pln $total $doubled
 ```
 ```text
-42 [20, 50, 14]
+42 [20 50 14]
 ```
 
 Pieces of a word written without spaces are folded too: `user_$id` is text,
@@ -175,7 +175,7 @@ pln ($x > 40 && $x < 50) (null ?? fallback) (0..4)
 ```
 ```text
 1+1 2 10.5 83 2 -42
-true fallback [0, 1, 2, 3]
+true fallback [0 1 2 3]
 ```
 
 Inside an expression you can call functions as `max(1, 2)`, or write a
@@ -198,7 +198,7 @@ pln (while ($i < 3) { i += 1; put $i })
 ```
 ```text
 big
-["THE", "QUICK", "FOX"]
+[THE QUICK FOX]
 <a><b><c>
 0:x 1:y 
 6
@@ -252,7 +252,7 @@ pln { map [1 2 3] fn (x) { put ($x * $x) } }
 ```
 ```text
 1 2 3
-[1, 4, 9]
+[1 4 9]
 ```
 
 ## References
@@ -269,7 +269,7 @@ incr &score.points;
 pln $xs $score
 ```
 ```text
-["a", "b"] {"points": 1}
+[a b] [points = 1]
 ```
 
 ## Errors
@@ -301,7 +301,7 @@ pln { shapes.square 4 }
 ```
 ```text
 Hello Bob
-["hi", "loaded"]
+[hi loaded]
 16
 ```
 

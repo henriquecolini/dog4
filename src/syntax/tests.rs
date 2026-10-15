@@ -6,7 +6,7 @@ use proptest::prelude::*;
 use super::ast::*;
 use super::{SourceId, parse};
 use crate::error::{ErrorKind, Limit};
-use crate::value::UpdateOp;
+use crate::value::{UpdateOp, Value};
 
 fn sexp_block(block: &Block) -> String {
     let stmts: Vec<String> = block.stmts.iter().map(sexp_stmt).collect();
@@ -90,6 +90,9 @@ fn sexp_args(args: &[Arg]) -> String {
 
 fn sexp(expr: &Expr) -> String {
     match &expr.kind {
+        // Strings always quoted, so the expected trees are unambiguous.
+        ExprKind::Lit(Value::Str(s)) => serde_json::Value::from(s.as_str()).to_string(),
+        ExprKind::Lit(Value::Null) => "null".into(),
         ExprKind::Lit(v) => v.repr(),
         ExprKind::Var(name) => format!("${name}"),
         ExprKind::Field(base, name) => format!("{}.{name}", sexp(base)),

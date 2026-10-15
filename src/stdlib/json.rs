@@ -3,7 +3,7 @@
 use std::fmt::Write;
 
 use super::{Library, checked_str, text};
-use crate::value::{Value, parse_json, to_json, write_repr};
+use crate::value::{Value, parse_json, to_json};
 
 pub(super) fn install(lib: &mut Library) {
     let mut json = Library::new();
@@ -40,7 +40,7 @@ fn flatten(value: &Value, path: &str, out: &mut String) {
                 let child = if simple {
                     format!("{path}.{key}")
                 } else {
-                    format!("{path}[{}]", Value::str(&**key).repr())
+                    format!("{path}[{}]", serde_json::Value::from(&**key))
                 };
                 flatten(&map[key], &child, out);
             }
@@ -52,9 +52,9 @@ fn flatten(value: &Value, path: &str, out: &mut String) {
             }
         }
         scalar => {
-            let _ = write!(out, "{path} = ");
-            write_repr(scalar, out, 0);
-            out.push('\n');
+            // gron lines are JSON; values here came from JSON, so they encode.
+            let json = to_json(scalar).unwrap_or(serde_json::Value::Null);
+            let _ = writeln!(out, "{path} = {json}");
         }
     }
 }

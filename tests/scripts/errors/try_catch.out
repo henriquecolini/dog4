@@ -5,5 +5,5 @@ fine
 null
 re-inner
 boom at 2
-[10, inf, 5]
+[10 (1 / 0) 5]
 undefined_thing

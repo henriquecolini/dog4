@@ -196,7 +196,7 @@ fn errors_carry_kind_location_trace_and_value() {
     assert_eq!(names, ["f", "g"]);
     let text = err.to_string();
     assert!(
-        text.starts_with("error: {\"code\": 7}\n --> main:1:11"),
+        text.starts_with("error: [code = 7]\n --> main:1:11"),
         "{text}"
     );
 }

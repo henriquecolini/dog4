@@ -53,7 +53,7 @@ pln { count a b c } { forward a b c }
 3 3
 ```
 
-`pln $args` prints an array as JSON. Forward rest arguments with `$%args`
+`pln $args` prints an array literal such as `[a b c]`. Forward rest arguments with `$%args`
 (dog3 passed them as one space-joined string). Natives receive them as
 separate arguments.
 

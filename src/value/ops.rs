@@ -295,7 +295,7 @@ pub fn get_key(value: &Value, key: &Value) -> Result<Value> {
         Value::Null => Ok(Value::Null),
         other => Err(Error::type_error(format!(
             "can't look up {} in {}",
-            key.repr(),
+            key.quoted_repr(),
             super::with_article(other.type_name())
         ))),
     }

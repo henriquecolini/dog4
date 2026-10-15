@@ -1,2 +1,2 @@
-{"a": 1, "b": {"c": 20, "d": "new"}}
+[a = 1, b = [c = 20, d = new]]
 replaced

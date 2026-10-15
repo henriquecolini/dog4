@@ -1,4 +1,4 @@
-{"name": "Ana", "tags": ["a", "b"], "n": 1.5, "ok": true, "none": null} b num
+[name = Ana, tags = [a b], n = 1.5, ok = true, none = (null)] b num
 {"a":1,"b":[true,null,"x"]}
 {
   "a": [

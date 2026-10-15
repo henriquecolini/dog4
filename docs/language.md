@@ -78,7 +78,7 @@ x = 5; id = 42; l = [a];
 pln user_$id $x$x "$x$x" $x"!" got:$l
 ```
 ```text
-user_42 10 55 5! ["got:", "a"]
+user_42 10 55 5! [got: a]
 ```
 
 **Bare literals.** A word of plain characters that reads exactly like a number
@@ -112,14 +112,18 @@ happens in place.
 everything else is truthy.
 
 **Display.** At the top level (printing, `pln`, interpolation) strings print as
-is and `null` prints nothing. Nested inside arrays and maps, values print as
-JSON; functions print as `<fn name>`.
+is and `null` prints nothing. Arrays and maps print as **dog4 literals**, so
+what a program prints can be pasted back into a program: strings are quoted
+only when they must be (spaces, special characters, text that would read as a
+number or bool), and a nested `null` prints as `(null)`, infinities and `NaN` as
+`(1 / 0)`, `(-1 / 0)` and `(0 / 0)`. Only functions, printed as `<fn name>`,
+have no literal form. Use `json.encode` for JSON.
 
 ```dog
 pln "a" [1 "two" (null) [k = v]] (null) $pln
 ```
 ```text
-a [1, "two", null, {"k": "v"}]  <fn pln>
+a [1 two (null) [k = v]]  <fn pln>
 ```
 
 ## 4. The fold (`+`)
@@ -144,8 +148,8 @@ pln { put 1; put 2 } { put [a]; put [b] } { put [x = 1]; put [x = 2] } { put tru
 pln ("a" + 1) (1 + "a") ([1] + 2) (0 + [1]) ({ put hi; put 5 })
 ```
 ```text
-3 ["a", "b"] {"x": 2} false
-a1 1a [1, 2] [0, 1] hi5
+3 [a b] [x = 2] false
+a1 1a [1 2] [0 1] hi5
 ```
 
 ## 5. Literals
@@ -192,7 +196,7 @@ pln (1 + 2 * 3) (7 / 2) (6 / 3) (-7 % 3) ("ab" * 3) (1..4) ($x > 5 && $x < 10);
 pln (0 || "") (null ?? 0) ([a b] == [a b]) (1 == 1.0) ("1" == 1)
 ```
 ```text
-7 3.5 2 2 ababab [1, 2, 3] true
+7 3.5 2 2 ababab [1 2 3] true
  0 true true false
 ```
 
@@ -220,7 +224,7 @@ pln (for k, v in [a = 1, b = 2] { put "$k=$v " });
 pln (try { fail nope } catch e { put "$e.kind: $e.message" })
 ```
 ```text
-[0, 1, 3, 4]
+[0 1 3 4]
 a=1 b=2 
 throw: nope
 ```
@@ -307,7 +311,7 @@ grow &data.items 3;
 pln $data
 ```
 ```text
-{"items": [0, 1, 2]}
+[items = [0 1 2]]
 ```
 
 ## 10. Modules
@@ -334,7 +338,7 @@ mod counter {
 pln { counter.next } { counter.next } { keys $counter }
 ```
 ```text
-1 2 ["n", "next"]
+1 2 [n next]
 ```
 
 ## 11. Errors
@@ -390,8 +394,8 @@ pln { sort [3 1 2] } { sum [1 2 3] } { upper hi } { replace a-b - + } { json.enc
 put { gron '{"a": [1, {"b": true}]}' }
 ```
 ```text
-a b [1, 2] 3 [0, 1, 2] x-y
-[1, 2, 3] 6 HI a+b {"a":[1]}
+a b [1 2] 3 [0 1 2] x-y
+[1 2 3] 6 HI a+b {"a":[1]}
 json = {}
 json.a = []
 json.a[0] = 1

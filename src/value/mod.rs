@@ -17,10 +17,10 @@ use std::rc::Rc;
 use indexmap::IndexMap;
 use rustc_hash::FxBuildHasher;
 
-pub use display::{fmt_num, write_repr};
+pub use display::{fmt_num, write_quoted, write_repr};
 pub use json::{from_json, parse_json, to_json};
 pub use ops::*;
-pub use types::{Type, can_coerce, coerce, parse_num, with_article};
+pub use types::{Type, bare_literal, can_coerce, coerce, parse_num, with_article};
 
 use crate::vm::{Function, RefData};
 
@@ -263,7 +263,7 @@ impl Value {
     /// A short description for error messages: the type, plus the value when small.
     pub fn describe(&self) -> String {
         match self {
-            Value::Str(s) if s.chars().count() <= 24 => format!("str {}", self.repr()),
+            Value::Str(s) if s.chars().count() <= 24 => format!("str {}", self.quoted_repr()),
             Value::Str(_) => "a long str".into(),
             Value::Int(_) | Value::Float(_) | Value::Bool(_) => {
                 format!("{} {}", self.type_name(), self.repr())
@@ -272,11 +272,25 @@ impl Value {
         }
     }
 
-    /// The nested ("JSON-ish") form: strings are quoted.
+    /// The nested form: dog4 literal syntax (`[a "b c" 5]`, `[k = v]`), with
+    /// strings quoted only when they need to be.
     pub fn repr(&self) -> String {
         let mut out = String::new();
         write_repr(self, &mut out, 0);
         out
+    }
+
+    /// Like [`repr`](Value::repr), but a string is always quoted, which keeps
+    /// error messages and listings unambiguous.
+    pub fn quoted_repr(&self) -> String {
+        match self {
+            Value::Str(s) => {
+                let mut out = String::new();
+                write_quoted(s, &mut out);
+                out
+            }
+            other => other.repr(),
+        }
     }
 }
 

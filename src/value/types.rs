@@ -119,6 +119,23 @@ pub fn with_article(noun: &str) -> String {
     }
 }
 
+/// A bare word that reads exactly like a number or a bool *is* one: `5`, `-2.5`,
+/// `true`. The rule is lossless — the value prints back as the same text — so
+/// `007`, `1.50` and `1e3` stay text.
+pub fn bare_literal(text: &str) -> Option<Value> {
+    match text {
+        "true" => return Some(Value::Bool(true)),
+        "false" => return Some(Value::Bool(false)),
+        _ => {}
+    }
+    let digits = text.strip_prefix('-').unwrap_or(text);
+    if !digits.starts_with(|c: char| c.is_ascii_digit()) {
+        return None;
+    }
+    let value = parse_num(text)?;
+    (value.to_string() == text).then_some(value)
+}
+
 /// Parses text as a number the way typed `num` parameters do.
 ///
 /// Accepts integers, decimals, exponents, `inf` and `nan`, ignoring surrounding whitespace.
