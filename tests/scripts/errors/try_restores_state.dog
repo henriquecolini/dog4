@@ -1,0 +1,5 @@
+// A caught error unwinds blocks, loops and calls cleanly.
+fn deep (n: num) { if ($n == 0) { throw bottom }; put [$n]; deep ($n - 1) }
+x = { put a; put (try { put { put b; deep 3 } } catch e { put [caught] }); put c };
+pln $x;
+pln (for i in [1 2 3] { put (try { if ($i == 2) { throw no }; put $i } catch e { put x }) });

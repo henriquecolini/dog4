@@ -1,0 +1,5 @@
+error: expected `;` between statements
+ --> syntax_missing_semicolon:1:7
+  |
+1 | x = 1 pln $x
+  |       ^

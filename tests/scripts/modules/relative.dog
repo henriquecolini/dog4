@@ -1,0 +1,2 @@
+use "lib/nested/inner";
+pln { inner.quadruple 3 };

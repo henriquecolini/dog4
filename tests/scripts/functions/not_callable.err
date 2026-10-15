@@ -1,0 +1,5 @@
+error: num 5 is not a function
+ --> not_callable:2:1
+  |
+2 | $x 1 2;
+  | ^^^^^^

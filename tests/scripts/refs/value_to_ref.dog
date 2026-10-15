@@ -1,0 +1,2 @@
+fn incr (n: &num) { n += 1 }
+incr 5;

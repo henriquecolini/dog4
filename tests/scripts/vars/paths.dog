@@ -1,0 +1,18 @@
+u = [name = Ana, langs = [rust]];
+u.name = Bia;
+u.langs += [dog];
+u.langs[0] = c;
+u.age = 30;
+u.address.city = Lisbon;
+pln $u;
+l = [1 2 3];
+l[-1] = 30;
+l[3] = 4;
+l[0] += 9;
+pln $l;
+copy = $l;
+copy[0] = changed;
+pln $l $copy;
+nothing = null;
+nothing.made = map;
+pln $nothing;

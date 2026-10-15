@@ -1,0 +1,5 @@
+error: can't compare str with num
+ --> compare_types:1:5
+  |
+1 | pln ("1" < 2);
+  |     ^^^^^^^^^

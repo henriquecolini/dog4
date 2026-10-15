@@ -1,0 +1,5 @@
+error: unknown command `print`
+ --> deny_print:2:1
+  |
+2 | print hi;
+  | ^^^^^

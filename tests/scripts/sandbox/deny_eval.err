@@ -1,0 +1,5 @@
+error: unknown command `eval`
+ --> deny_eval:2:7
+  |
+2 | pln { eval "put 1" };
+  |       ^^^^

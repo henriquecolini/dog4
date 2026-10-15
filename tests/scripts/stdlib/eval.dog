@@ -1,0 +1,5 @@
+eval "fn say_hello () { pln 'Hello, world!' } say_hello";
+x = 1;
+pln { eval 'put ($x + 1)' };
+pln { eval "put (2 * 21)" };
+pln (try { eval "pln (" } catch e { put $e.kind });

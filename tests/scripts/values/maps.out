@@ -1,0 +1,7 @@
+{"name": "Bob", "age": 30, "tags": ["a", "b"]}
+Bob 30 b 
+{} map 3
+Bob 30
+{"name": "dynamic", "2": "two"}
+{"a": 2}
+deep

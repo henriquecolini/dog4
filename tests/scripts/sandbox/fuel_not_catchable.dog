@@ -1,0 +1,2 @@
+// fuel: 10000
+pln (try { while true { } } catch e { put caught });

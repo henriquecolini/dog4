@@ -1,0 +1,3 @@
+// Module functions see their own globals live; the imported map is a snapshot.
+use "lib/counter";
+pln { counter.bump } { counter.bump } { counter.current } $counter.count;

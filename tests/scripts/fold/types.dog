@@ -1,0 +1,10 @@
+pln { put 1; put 2; put 3 };
+pln { put [a]; put [b]; put [c] };
+pln { put [x = 1]; put [y = 2]; put [x = 3] };
+pln { put true; put true } { put true; put false };
+pln { put ab; put cd };
+pln { put hi; put 5 } { put 5; put hi } { put is; put " "; put true };
+pln { put [a]; put b } { put a; put [b] };
+pln { put [] } { put [=] };
+x = {};
+pln (type $x) "[$x]";

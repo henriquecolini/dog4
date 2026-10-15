@@ -1,0 +1,10 @@
+l = [a b c];
+pln $l (type $l) { len $l };
+pln [] [1, 2, 3] [1 2 (1 + 2)] ["x y" z];
+pln $l[0] $l[2] $l[-1] $l[5] $l.1;
+i = 1;
+pln $l[$i] $l[($i + 1)];
+nested = [[1 2] [3 [4 5]]];
+pln $nested $nested[1][1][0];
+pln [$l $l];
+pln [{ put a; put b } (if true { put yes })];

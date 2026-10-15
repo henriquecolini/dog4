@@ -1,0 +1,2 @@
+// deny: print
+print hi;

@@ -1,0 +1,9 @@
+error: `split` needs a string, not an arr
+ --> html:2:21
+  |
+2 |     put for line in $content split "\n" {
+  |                     ^^^^^^^^
+  in tab (html:10:5)
+  in tag (html:17:20)
+  in h1 (html:21:9)
+  in PersonCard (html:27:5)

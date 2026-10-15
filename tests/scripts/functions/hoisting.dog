@@ -1,0 +1,9 @@
+// Functions can be used before they are defined, and can call each other.
+pln { is_even 10 } { is_odd 7 };
+fn is_even (n: num) { put (if ($n == 0) { true } else { is_odd ($n - 1) }) }
+fn is_odd (n: num) { put (if ($n == 0) { false } else { is_even ($n - 1) }) }
+fn outer () {
+    put { inner };
+    fn inner () { put "from inner" }
+}
+pln { outer };

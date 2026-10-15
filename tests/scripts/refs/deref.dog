@@ -1,0 +1,4 @@
+// A reference passed to a normal parameter is just its value.
+fn show (x) { put "[$x]" }
+v = 5;
+pln { show &v };

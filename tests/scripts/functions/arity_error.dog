@@ -1,0 +1,2 @@
+fn two (a, b) { put $a$b }
+two 1;

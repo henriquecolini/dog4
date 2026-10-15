@@ -1,0 +1,8 @@
+error: invalid regular expression: regex parse error:
+    (unclosed
+    ^
+error: unclosed group
+ --> regex_error:1:1
+  |
+1 | search abc "(unclosed";
+  | ^^^^^^^^^^^^^^^^^^^^^^

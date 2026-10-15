@@ -1,0 +1,5 @@
+error: circular import: lib/cycle_a → lib/cycle_b → lib/cycle_a
+ --> lib/cycle_b:1:1
+  |
+1 | use "./cycle_a";
+  | ^^^^^^^^^^^^^^^

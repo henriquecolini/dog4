@@ -1,0 +1,6 @@
+error: can't compute num / arr
+ --> callback_trace:1:26
+  |
+1 | map [1 2 3] fn (x) { put ($x / [0]) };
+  |                          ^^^^^^^^^^
+  in <lambda> (callback_trace:1:1)

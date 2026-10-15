@@ -1,0 +1,10 @@
+fn twice (f: fn, x) { put ($f($f($x))) }
+pln { twice fn (v) { put "($v)" } a };
+fn each_with_index (items: arr, f: fn) {
+    put for i, x in $items { put ($f($i, $x)) }
+}
+pln { each_with_index [a b] fn (i, x) { put "$i=$x;" } };
+total = 0;
+each [1 2 3] fn (x) { total += $x };
+pln $total;
+pln { sort_by [banana kiwi apple] fn (w) { put { strlen $w } } };

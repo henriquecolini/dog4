@@ -1,0 +1,12 @@
+f = fn (x) { put ($x + 100) };
+pln { map [1 2 3] $f };
+pln { map [1 2 3] fn (v) { put ($v * 10) } };
+pln { filter (0..10) fn (n) { put ($n % 3 == 0) } };
+pln { reduce [1 2 3 4] 0 fn (acc, x) { put ($acc + $x) } };
+pln (fn (a, b) { put "$a-$b" }(x, y));
+compose = fn (f, g) { put fn (x) { put ($g($f($x))) } };
+inc = fn (x) { put ($x + 1) };
+dbl = fn (x) { put ($x * 2) };
+h = { compose $inc $dbl };
+pln ($h(5));
+pln $inc (type $inc);

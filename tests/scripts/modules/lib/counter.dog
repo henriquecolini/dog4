@@ -1,0 +1,3 @@
+count = 0;
+fn bump () { count += 1; put $count }
+fn current () { put $count }

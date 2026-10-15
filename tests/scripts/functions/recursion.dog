@@ -1,0 +1,7 @@
+fn fib (n: num) {
+    if ($n < 2) { return $n };
+    put (fib($n - 1) + fib($n - 2))
+}
+pln { fib 20 };
+fn fact (n: num) { put (if ($n <= 1) { put 1 } else { put ($n * fact($n - 1)) }) }
+pln { fact 20 };

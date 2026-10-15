@@ -1,0 +1,8 @@
+x = 10;
+pln while { gt $x 0 } {
+	put "$x ";
+	x = { sub $x 1 };
+};
+i = 0;
+pln (while ($i < 5) { i += 1; put $i });
+pln (while false { put never });

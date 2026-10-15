@@ -1,0 +1,4 @@
+fn t (v) { put (if $v { put T } else { put F }) }
+pln { t (false) } { t (null) } { t (0) } { t "" } { t [] } { t [=] };
+pln { t (true) } { t (1) } { t "0" } { t [0] } { t [a = 1] } { t (-1) } { t $t };
+pln { t {} } { t { put x } };

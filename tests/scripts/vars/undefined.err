@@ -1,0 +1,5 @@
+error: `nope` is not defined
+ --> undefined:1:5
+  |
+1 | pln $nope;
+  |     ^^^^^

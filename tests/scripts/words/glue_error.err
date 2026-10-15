@@ -1,0 +1,5 @@
+error: can't add map to str
+ --> glue_error:2:5
+  |
+2 | pln id:$m;
+  |     ^^^^^

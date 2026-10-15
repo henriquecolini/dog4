@@ -1,0 +1,6 @@
+u = [name = Ana, langs = [rust dog], pos = [x = 1]];
+pln $u.name $u.langs.0 $u.langs[1] $u.pos.x;
+pln "$u.name likes $u.langs[1]";
+pln $u.name.;
+n = $u.name;
+pln ${n}.;

@@ -1,0 +1,10 @@
+put for x in "dog4    is my  favorite  language" { pln "- $x" };
+put for x in "ideal,for,csv" split "," { pln "- $x" };
+pln (for c in "abc" split "" { put [$c] });
+pln;
+pln (for x in [1 2 3] { put ($x * 10) });
+pln (for i, x in [a b c] { put "$i:$x " });
+m = [one = 1, two = 2];
+pln (for k in $m { put [$k] }) (for k, v in $m { put [$v = $k] });
+pln (for x in (null) { put x }) (for x in null { put [$x] });
+pln (for x in [] { put x }) (type (for x in [] { put x }));

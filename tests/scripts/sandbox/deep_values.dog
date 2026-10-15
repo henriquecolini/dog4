@@ -1,0 +1,6 @@
+// Building and dropping a deeply nested value is fine.
+v = null;
+for i in (0..100000) { v = [$v] };
+pln { len $v };
+v = null;
+pln done;

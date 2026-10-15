@@ -1,0 +1,5 @@
+// Appending through a reference is in place: this would be quadratic with copies.
+fn push (list: &arr, item) { list += [$item] }
+xs = [];
+for i in (0..20000) { push &xs $i };
+pln { len $xs } $xs[19999];

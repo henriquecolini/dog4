@@ -1,0 +1,5 @@
+error: references can only be created inside a block or function
+ --> let_top_level:2:1
+  |
+2 | let r = &x;
+  | ^^^^^^^^^^

@@ -1,0 +1,12 @@
+// `x = v` writes to the nearest existing x, otherwise declares it in the current block.
+x = outer;
+{ x = changed };
+pln $x;
+{ y = inner; pln $y };
+found = false;
+for v in [a b c] { if ($v == b) { found = true } };
+pln $found;
+count = 0;
+fn bump () { count += 1 }
+bump; bump;
+pln $count;

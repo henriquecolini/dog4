@@ -1,0 +1,1 @@
+pln { put 1; put [k = v] };

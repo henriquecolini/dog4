@@ -1,0 +1,2 @@
+fn ok () { put fine }
+pln (1 +;

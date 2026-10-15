@@ -1,0 +1,3 @@
+grid = for y in (0..3) { put [(for x in (0..3) { put [($x * $y)] })] };
+pln $grid;
+pln (for row in $grid { put { sum $row } });

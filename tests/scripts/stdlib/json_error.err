@@ -1,0 +1,5 @@
+error: invalid JSON: key must be a string at line 1 column 2
+ --> json_error:1:1
+  |
+1 | json.parse "{oops";
+  | ^^^^^^^^^^^^^^^^^^

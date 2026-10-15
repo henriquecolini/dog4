@@ -1,0 +1,12 @@
+i = 10;
+fn sum_to (n: num) {
+    let i = 0;
+    let total = 0;
+    while ($i < $n) { total += $i; i += 1 };
+    put $total
+}
+pln { sum_to 5 } $i;
+x = outer;
+put { let x = inner; pln $x };
+pln $x;
+put for k in [1 2] { let k = shadow$k; pln $k };

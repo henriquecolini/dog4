@@ -1,0 +1,5 @@
+error: comparisons can't be chained; combine them with `&&`
+ --> chain_error:1:11
+  |
+1 | x = 1 < 2 < 3;
+  |           ^

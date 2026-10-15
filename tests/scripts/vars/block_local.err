@@ -1,0 +1,5 @@
+error: `temp` is not defined
+ --> block_local:2:5
+  |
+2 | pln $temp;
+  |     ^^^^^

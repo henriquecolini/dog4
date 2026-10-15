@@ -1,0 +1,10 @@
+fn hug (l, r, %items) { put for x in $items { put $l$x$r } }
+pln { hug < > a b c d e f };
+fn count (%xs) { put { len $xs } }
+pln { count } { count a } { count a b c };
+fn nums (%xs: num) { put { sum $xs } }
+pln { nums 1 2 "3" };
+list = [x y z];
+pln { hug "(" ")" $%list } { count $%list } { count $list };
+words = "spread these words";
+pln { count $%words };

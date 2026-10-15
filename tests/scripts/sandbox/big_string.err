@@ -1,0 +1,5 @@
+error: string too large
+ --> big_string:2:5
+  |
+2 | x = "a" * 100000000000;
+  |     ^^^^^^^^^^^^^^^^^^

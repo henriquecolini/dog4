@@ -1,0 +1,9 @@
+quote = q;
+pln "double $quote" 'single $quote' plain;
+pln "tab:\there" 'nl:\n.' "quote: \" back: \\";
+pln a\ b\ c "$" '$' cost:$;
+name = Ana;
+pln "hi $name!" "${name}s" "${name}.txt";
+pln "sum: $(1 + 2)" "nested: $("in" + "side")";
+pln 'it''s' "it's" it's;
+pln cão é ¡ok! 你好;

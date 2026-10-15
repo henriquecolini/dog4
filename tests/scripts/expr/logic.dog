@@ -1,0 +1,6 @@
+// `&&` and `||` short-circuit and return an operand, like Python.
+fn loud (v) { println "evaluated $v"; put $v }
+pln ($(false) && { loud no }) ($(true) || { loud no });
+pln (0 || fallback) ("" && x) (1 && 2) (null || []);
+pln ({ loud a } ?? { loud b });
+pln (null ?? null ?? last);

@@ -1,0 +1,4 @@
+[1, "two", true, "null", [3], {"k": "v"}]
+ <>
+[<fn <lambda>>] <fn put>
+["quote\"", "new\nline", "tab\t"]

@@ -1,0 +1,4 @@
+// A module runs once per runtime; later imports get the cached map.
+use "lib/greet";
+use "lib/greet" as again;
+pln ($greet == $again);

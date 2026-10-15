@@ -1,0 +1,13 @@
+put if { true } "Hello ";
+put if { false } "never!" else "Beautiful ";
+put if { true } "World!" else "never!";
+pln;
+x = 7;
+pln (if ($x > 5) { put big } else { put small });
+pln (if ($x > 10) { put big });
+fn grade (n: num) {
+    put if ($n >= 90) { put A }
+    else if ($n >= 80) { put B }
+    else { put C }
+}
+pln { grade 95 } { grade 85 } { grade 10 };

@@ -1,0 +1,5 @@
+pln { add 1 2 3 } { sub 10 1 1 } { mul 10 10 10 } { div 100 2 2 };
+pln { div 1 0 } { add 10 inf } { sub inf inf };
+pln { max 1 5 3 } { min 4 2 8 } { floor 2.7 } { ceil 2.1 } { round 2.5 } { abs -3 } { sqrt 16 };
+pln { pow 2 10 } { pow 2 0.5 } { pow 2 -1 };
+pln { add "1" "2" };

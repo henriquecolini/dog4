@@ -1,0 +1,6 @@
+fn add_one (x) { put ($x + 1) }
+fn say_hello () { pln Hello world! }
+fn say_hello (name) { pln Hello $name }
+pln { add_one 5 };
+say_hello;
+say_hello dog4;

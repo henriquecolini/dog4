@@ -1,0 +1,21 @@
+fn put(%args) {
+    // built-in
+}
+fn favorite_number () {
+    // this is my favorite_number!
+    put 42
+}
+fn favorite_number (times) {
+    mul { favorite_number } $times
+}
+fn favorite_number () {
+    // this is my favorite_number!
+    put 42
+}
+fn favorite_number (times) {
+    mul { favorite_number } $times
+}
+fn add(first: num, %rest: num) {
+    // built-in
+}
+fn (x: num, %rest: str) { put $x }

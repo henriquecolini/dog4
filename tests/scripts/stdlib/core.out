@@ -1,0 +1,3 @@
+num str arr map fn null bool
+42 num 5 str false true
+["a", "b", "c"] ["x"]

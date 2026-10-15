@@ -1,0 +1,11 @@
+pln { len "a b c" } { len [1 2] } { len [a = 1] } { len "a,b" , } { len "" , } { len (null) };
+pln { first "a b c" 2 } { first [1 2 3] 2 } { first "a,b,c" 1 , } { type { first [1] 5 } };
+pln { last "a b c" 2 } { last [1 2 3] 1 } { last "a b" 0 };
+pln { append "a b" "c" } { append [1] [2 3] } { append "x-y" z - };
+pln { range 5 } { range 2 5 } { range 0 10 3 } { range 5 0 -2 } { range 0 10 3 , } { range 0 };
+pln { keys [a = 1, b = 2] } { values [a = 1, b = 2] };
+pln { contains [a b] b } { contains [a b] z } { contains [k = 1] k } { contains "hello" ell };
+pln { join [a b c] } { join [a b c] - } { join [1 [2]] , };
+pln { split "a b  c" } { split "a,b,,c" , } { chars "cão" };
+pln { reverse [1 2 3] } { reverse "abc" } { sum [1 2 3] } { sum [a b] } { sum [] };
+pln { sort [3 1 2] } { sort [b c a] } { index_of [a b c] c } { index_of "hello" l } { index_of [a] z };

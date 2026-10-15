@@ -1,0 +1,7 @@
+fn add3 (a, b, c) { put ($a + $b + $c) }
+pln (add3(1, 2, 3)) (max(1, 5, 3)) (json.encode([1 2]));
+f = fn (x) { put ($x * 2) };
+pln ($f(21)) ({ $f 4 });
+m = [double = $f];
+pln ($m.double(8)) { $m.double 9 };
+pln (range(3)[1]) (len([a b]));

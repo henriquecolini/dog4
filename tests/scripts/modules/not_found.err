@@ -1,0 +1,5 @@
+error: module `lib/nope` not found
+ --> not_found:1:1
+  |
+1 | use "lib/nope";
+  | ^^^^^^^^^^^^^^

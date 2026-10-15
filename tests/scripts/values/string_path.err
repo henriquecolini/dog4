@@ -1,0 +1,5 @@
+error: strings are indexed by whole numbers, not str "txt"
+ --> string_path:3:6
+  |
+3 | pln "$name.txt";
+  |      ^^^^^^^^^

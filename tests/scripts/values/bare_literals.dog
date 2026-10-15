@@ -1,0 +1,5 @@
+// Bare words that read exactly like a number or bool are one; anything else is text.
+pln { type 5 } { type -2.5 } { type true } { type false };
+pln { type 007 } { type 1.50 } { type 1e3 } { type 5px } { type null } { type +5 };
+pln 007 1.50 1e3;
+pln { put 1; put 2 } { put 1.5; put 1.5 };

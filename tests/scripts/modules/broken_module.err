@@ -1,0 +1,5 @@
+error: expected an expression, found `;`
+ --> lib/broken:2:9
+  |
+2 | pln (1 +;
+  |         ^

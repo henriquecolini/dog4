@@ -1,0 +1,5 @@
+error: can't negate str
+ --> neg_error:1:5
+  |
+1 | pln (-"a");
+  |     ^^^^^^

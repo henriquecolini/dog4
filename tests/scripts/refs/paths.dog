@@ -1,0 +1,11 @@
+fn incr (n: &num) { n += 1 }
+user = [name = Ana, stats = [score = 1]];
+incr &user.stats.score;
+incr &user.stats.score;
+pln $user;
+l = [1 2 3];
+incr &l[1];
+pln $l;
+fn set_name (u: &map, name: str) { u.name = $name }
+set_name &user Bia;
+pln $user.name;

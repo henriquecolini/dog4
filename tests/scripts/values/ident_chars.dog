@@ -1,0 +1,2 @@
+unit = cm;
+pln "5$unit²" 5$unit² $unit!;

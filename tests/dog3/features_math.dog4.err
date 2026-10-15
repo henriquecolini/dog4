@@ -1,0 +1,5 @@
+error: `add` expects a num for `first`, got str "word"
+  --> features_math:11:7
+   |
+11 | pln { add word 10 };
+   |       ^^^^^^^^^^^^

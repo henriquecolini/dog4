@@ -1,0 +1,6 @@
+error: `later` is used before it has a value
+ --> before_assignment:1:18
+  |
+1 | fn show () { pln $later }
+  |                  ^^^^^^
+  in show (before_assignment:2:1)

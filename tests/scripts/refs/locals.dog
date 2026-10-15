@@ -1,0 +1,16 @@
+fn incr (n: &num) { n += 1 }
+fn local_counter () {
+    c = 10;
+    incr &c;
+    incr &c;
+    put $c
+}
+pln { local_counter };
+fn wrapper (x: &num) { incr &x; incr &x }
+y = 0;
+wrapper &y;
+pln $y;
+fn call_twice (f: fn) { $f; $f }
+z = 0;
+call_twice fn () { incr &z };
+pln $z;

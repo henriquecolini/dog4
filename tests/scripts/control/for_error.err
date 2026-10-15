@@ -1,0 +1,5 @@
+error: can't loop over a num
+ --> for_error:1:10
+  |
+1 | for x in (5) { put $x }
+  |          ^^^

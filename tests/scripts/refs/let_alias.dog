@@ -1,0 +1,11 @@
+fn demo () {
+    data = [a = 1, b = [c = 2]];
+    let deep = &data.b;
+    deep.c = 20;
+    deep.d = new;
+    pln $data;
+    let alias = &data;
+    alias = replaced;
+    pln $data;
+}
+put { demo };

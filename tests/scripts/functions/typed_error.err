@@ -1,0 +1,5 @@
+error: `double` expects a num for `x`, got str "abc"
+ --> typed_error:2:1
+  |
+2 | double abc;
+  | ^^^^^^^^^^

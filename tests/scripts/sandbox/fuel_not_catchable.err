@@ -1,0 +1,5 @@
+error: ran out of fuel (the script did too much work)
+ --> fuel_not_catchable:2:12
+  |
+2 | pln (try { while true { } } catch e { put caught });
+  |            ^^^^^^^^^^^^^^

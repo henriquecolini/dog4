@@ -1,0 +1,8 @@
+pln { put a; put b; clear c; put d };
+pln { put a; clear; put d };
+fn f () { put ignored; return kept; put never }
+pln { f };
+fn g () { put a; put b }
+pln { g };
+x = { put a; if true { clear z }; put b };
+pln $x;

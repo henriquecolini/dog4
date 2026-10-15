@@ -1,0 +1,5 @@
+error: ran out of fuel (the script did too much work)
+ --> fuel:2:1
+  |
+2 | while true { };
+  | ^^^^^^^^^^^^^^

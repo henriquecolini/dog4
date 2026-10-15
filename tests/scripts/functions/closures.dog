@@ -1,0 +1,18 @@
+fn make_counter () {
+    n = 0;
+    put fn () { n += 1; put $n }
+}
+a = { make_counter };
+b = { make_counter };
+pln ($a()) ($a()) ($a()) ($b());
+// Each loop iteration gets its own variable.
+fs = for i in [1 2 3] { put [fn () { put $i }] };
+pln (for f in $fs { put [$f()] });
+// Closures see later changes to captured variables.
+x = 1;
+get = fn () { put $x };
+x = 2;
+pln ($get());
+fn adder (n) { put fn (x) { put ($x + $n) } }
+add5 = { adder 5 };
+pln ($add5(10));

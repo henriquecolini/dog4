@@ -1,0 +1,13 @@
+fn push (list: &arr, item) { list += [$item] }
+fn incr (n: &num) { n += 1 }
+xs = [];
+push &xs a;
+push &xs b;
+pln $xs;
+count = 0;
+incr &count; incr &count;
+pln $count;
+fn reset (x: &) { x = fresh }
+v = old;
+reset &v;
+pln $v;

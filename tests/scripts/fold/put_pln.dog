@@ -1,0 +1,7 @@
+pln { put } { type { put } };
+pln { put a b c };
+pln { put [1] };
+pln { put [1] [2] };
+put { pln };
+pln one two;
+put (type { pln x });

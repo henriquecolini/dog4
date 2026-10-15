@@ -1,0 +1,8 @@
+error: can't add map to num
+ --> uncaught_trace:1:25
+  |
+1 | fn inner (x: num) { put ($x + [k = v]) }
+  |                         ^^^^^^^^^^^^^^
+  in inner (uncaught_trace:2:17)
+  in middle (uncaught_trace:3:15)
+  in outer (uncaught_trace:4:1)

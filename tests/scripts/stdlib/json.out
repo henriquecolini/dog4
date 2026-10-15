@@ -1,0 +1,16 @@
+{"name": "Ana", "tags": ["a", "b"], "n": 1.5, "ok": true, "none": null} b num
+{"a":1,"b":[true,null,"x"]}
+{
+  "a": [
+    1
+  ]
+}
+json = {}
+json.bar = {}
+json.bar.baz = false
+json.foo = []
+json.foo[0] = 1
+json.foo[1] = 2
+json.foo[2] = 3
+json["with space"] = "x"
+null

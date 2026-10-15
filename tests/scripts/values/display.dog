@@ -1,0 +1,4 @@
+pln [1 "two" true null [3] [k = v]];
+pln (null) "<$(null)>";
+pln [fn (x) {}] $put;
+pln ["quote\"" "new\nline" "tab\t"];

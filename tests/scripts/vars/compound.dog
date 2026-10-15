@@ -1,0 +1,8 @@
+n = 10;
+n += 5; pln $n;
+n -= 3; pln $n;
+n *= 2; pln $n;
+n /= 4; pln $n;
+s = ab; s += cd; s *= 2; pln $s;
+l = [a]; l += [b]; l += c; pln $l;
+m = [=]; m += [k = 1]; pln $m;

@@ -1,0 +1,5 @@
+fn push (list: &arr, item) { list += [$item] }
+xs = [];
+push(&xs, 1);
+put (push(&xs, 2));
+pln $xs;

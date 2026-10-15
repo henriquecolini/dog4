@@ -1,0 +1,5 @@
+error: `two` takes 2 arguments, got 1
+ --> arity_error:2:1
+  |
+2 | two 1;
+  | ^^^^^

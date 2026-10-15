@@ -1,0 +1,3 @@
+// limits: sandbox
+fn nest (n: num) { map [1] fn (x) { nest ($n + 1) } }
+nest 0;

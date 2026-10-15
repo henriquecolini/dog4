@@ -1,0 +1,5 @@
+pln { upper hello world } { lower ABC } { trim "  pad  " } { strlen "cão" };
+pln { replace "a-b-c" - + } { replace aaa a "" } { replace abc "" x };
+pln { starts_with hello he } { ends_with hello lo } { matches "abc123" "[0-9]+" };
+put { search "aaaab\naaaa\nbaaa\nbbbbb" "^b" };
+pln { is_alpha abc } { is_alpha a1 } { is_alphanumeric a1 } { is_alpha };

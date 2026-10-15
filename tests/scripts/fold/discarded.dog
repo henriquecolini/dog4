@@ -1,0 +1,11 @@
+// Bare blocks and control statements are evaluated, but their value is discarded.
+put Hello1;
+{ put Hello2 }
+put { put Hello3 };
+put { { put Hello4 } };
+put { if true { put Hello5 } };
+put { put if true { put Hello6 } };
+x = { for i in [1 2] { put $i } };
+pln "[" $x "]";
+y = for i in [1 2] { put $i };
+pln $y;

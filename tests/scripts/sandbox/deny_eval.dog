@@ -1,0 +1,2 @@
+// deny: eval
+pln { eval "put 1" };

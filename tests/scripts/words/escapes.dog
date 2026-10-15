@@ -1,0 +1,2 @@
+pln \$x \{ \} \; \[ \( \\ ;
+pln one\ word "two\nlines";

@@ -1,0 +1,5 @@
+error: references can't be stored in an array; they can only be passed to functions
+ --> in_array:2:7
+  |
+2 | l = [&x];
+  |       ^

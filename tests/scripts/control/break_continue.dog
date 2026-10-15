@@ -1,0 +1,7 @@
+pln (for x in (0..10) { if ($x == 3) { continue }; if ($x == 6) { break }; put [$x] });
+pln (for x in (0..10) { put [$x]; if ($x == 2) { break } });
+pln (for x in [a b c] { if ($x == b) { break found } ; put $x });
+i = 0;
+pln (while true { i += 1; if ($i > 3) { break }; put $i });
+pln (for x in [1 2] { put (for y in [a b] { if ($y == b) { break }; put "$x$y " }) });
+pln (for x in (0..4) { put [$x]; if ($x % 2 == 0) { continue }; put [odd] });

@@ -1,0 +1,7 @@
+ten bytes
+ten bytes
+error: printed too much output
+ --> output:2:14
+  |
+2 | while true { print "ten bytes\n" };
+  |              ^^^^^^^^^^^^^^^^^^^^

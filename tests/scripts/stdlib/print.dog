@@ -1,0 +1,3 @@
+print "printed ";
+println "immediately";
+pln "folded output comes last";

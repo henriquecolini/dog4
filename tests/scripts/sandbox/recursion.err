@@ -1,0 +1,15 @@
+error: too many nested function calls
+ --> recursion:2:20
+  |
+2 | fn down (n: num) { down ($n + 1) }
+  |                    ^^^^^^^^^^^^^^
+  in down (recursion:2:20)
+  in down (recursion:2:20)
+  in down (recursion:2:20)
+  in down (recursion:2:20)
+  in down (recursion:2:20)
+  in down (recursion:2:20)
+  … 502 more calls
+  in down (recursion:2:20)
+  in down (recursion:2:20)
+  in down (recursion:3:1)

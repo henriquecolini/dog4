@@ -1,0 +1,10 @@
+m = [name = Bob, age = 30, tags = [a b]];
+pln $m;
+pln $m.name $m.age $m.tags[1] $m.missing;
+pln [=] { type [=] } { len $m };
+k = name;
+pln $m[$k] $m["age"];
+d = [$k = dynamic, (1 + 1) = two];
+pln $d;
+pln [a = 1, a = 2];
+pln [x = [y = [z = deep]]].x.y.z;

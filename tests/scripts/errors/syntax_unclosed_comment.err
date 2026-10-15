@@ -1,0 +1,5 @@
+error: unclosed `/*` comment
+ --> syntax_unclosed_comment:1:9
+  |
+1 | pln hi; /* never closed
+  |         ^^

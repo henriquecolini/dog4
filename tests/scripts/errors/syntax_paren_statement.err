@@ -1,0 +1,5 @@
+error: a statement can't start with `(`; use `put (…)` to output an expression
+ --> syntax_paren_statement:1:1
+  |
+1 | (1 + 2)
+  | ^

@@ -1,0 +1,3 @@
+fn show () { pln $later }
+show;
+later = 1;

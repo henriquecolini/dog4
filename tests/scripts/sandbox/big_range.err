@@ -1,0 +1,5 @@
+error: array or map too large
+ --> big_range:2:1
+  |
+2 | range 1000000000;
+  | ^^^^^^^^^^^^^^^^

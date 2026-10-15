@@ -1,0 +1,5 @@
+error: unknown type `wat` (expected any, str, num, bool, arr, map, fn or null)
+ --> unknown_type:1:10
+  |
+1 | fn f (x: wat) { put $x }
+  |          ^^^

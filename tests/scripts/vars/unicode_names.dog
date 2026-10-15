@@ -1,0 +1,4 @@
+cão = 10;
+pln cão é $cão !;
+número_1 = um;
+pln $número_1;

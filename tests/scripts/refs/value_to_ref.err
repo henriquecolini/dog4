@@ -1,0 +1,5 @@
+error: `n` of `incr` is a reference parameter; pass `&variable`
+ --> value_to_ref:2:1
+  |
+2 | incr 5;
+  | ^^^^^^

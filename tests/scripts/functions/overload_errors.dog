@@ -1,0 +1,3 @@
+fn show (x: num) { put number }
+fn show (x: map) { put map }
+show [a b];

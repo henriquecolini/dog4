@@ -1,0 +1,5 @@
+error: can't add map to num
+ --> errors:1:14
+  |
+1 | pln { put 1; put [k = v] };
+  |              ^^^^^^^^^^^^

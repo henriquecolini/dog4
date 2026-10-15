@@ -1,0 +1,10 @@
+fn show (x: num) { put number }
+fn show (x: str) { put text }
+fn show (x: arr) { put array }
+fn show (x, y) { put pair }
+pln { show (5) } { show hi } { show [a] } { show a b };
+// Exact matches win over coercions: the bare word 5 is a num already.
+pln { show 5 } { show "5" };
+fn pick (x: map) { put map }
+fn pick (x: num) { put num }
+pln { pick "12" };

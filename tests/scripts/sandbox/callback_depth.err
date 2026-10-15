@@ -1,0 +1,15 @@
+error: too many nested callbacks
+ --> callback_depth:2:20
+  |
+2 | fn nest (n: num) { map [1] fn (x) { nest ($n + 1) } }
+  |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  in nest (callback_depth:2:37)
+  in <lambda> (callback_depth:2:20)
+  in nest (callback_depth:2:37)
+  in <lambda> (callback_depth:2:20)
+  in nest (callback_depth:2:37)
+  in <lambda> (callback_depth:2:20)
+  … 54 more calls
+  in nest (callback_depth:2:37)
+  in <lambda> (callback_depth:2:20)
+  in nest (callback_depth:3:1)

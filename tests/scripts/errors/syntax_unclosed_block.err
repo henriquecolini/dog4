@@ -1,0 +1,5 @@
+error: expected `}`, found the end of the input
+ --> syntax_unclosed_block:3:1
+  |
+3 | 
+  | ^

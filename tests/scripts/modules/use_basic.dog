@@ -1,0 +1,4 @@
+use "lib/greet";
+greet.hi Bob;
+pln $greet.loaded { keys $greet };
+$greet.hi Ana;

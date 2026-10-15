@@ -1,0 +1,7 @@
+// `+` is exactly the operation blocks use to combine outputs.
+a = [1 2];
+b = [3];
+pln ($a + $b) { put $a; put $b };
+pln ("x" + 1 + 2) (1 + 2 + "x");
+pln ([k = 1] + [j = 2]);
+pln (null + 5) (5 + null);

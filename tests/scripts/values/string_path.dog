@@ -1,0 +1,3 @@
+// `$name.txt` reads a field called `txt`; write `${name}.txt` for text.
+name = report;
+pln "$name.txt";

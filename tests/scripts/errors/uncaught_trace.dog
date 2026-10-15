@@ -1,0 +1,4 @@
+fn inner (x: num) { put ($x + [k = v]) }
+fn middle (x) { inner $x }
+fn outer () { middle 1 }
+outer;

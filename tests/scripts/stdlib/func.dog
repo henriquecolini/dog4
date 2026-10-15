@@ -1,0 +1,6 @@
+pln { map [1 2 3] fn (x) { put ($x * $x) } };
+pln { map "a b" fn (w) { put { upper $w } } };
+pln { filter [1 2 3 4] fn (x) { put ($x % 2 == 0) } };
+pln { reduce [a b c] "" fn (acc, x) { put "$x$acc" } };
+pln { each [1 2] fn (x) { println "each $x" } };
+pln { sort_by [[n = 3] [n = 1] [n = 2]] fn (x) { put $x.n } };

@@ -1,0 +1,5 @@
+error: `secret` is not defined
+ --> inline_isolated:2:16
+  |
+2 | mod m { leak = $secret }
+  |                ^^^^^^^

@@ -1,0 +1,9 @@
+// Pieces written without spaces glue together with `+`.
+x = 5;
+id = 42;
+pln user_$id $x$x "$x$x" $x"!" <$x>;
+l = [a];
+m = [k = v];
+pln $l$l got:$l;
+pln (type $x$x) (type "$x$x");
+pln a,b,c a=b https://example.com/a?b=c;

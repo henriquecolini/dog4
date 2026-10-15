@@ -1,0 +1,5 @@
+error: unclosed string
+ --> syntax_unclosed_string:1:5
+  |
+1 | pln "abc;
+  |     ^

@@ -1,0 +1,5 @@
+error: `f` is already defined with the same parameters
+ --> duplicate:2:1
+  |
+2 | fn f (y) { put 2 }
+  | ^^^^^^^^^^^^^^^^^^

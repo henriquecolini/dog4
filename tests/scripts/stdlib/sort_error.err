@@ -1,0 +1,5 @@
+error: can't compare str with num
+ --> sort_error:1:1
+  |
+1 | sort [1 a];
+  | ^^^^^^^^^^
