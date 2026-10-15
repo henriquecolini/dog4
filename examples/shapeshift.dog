@@ -1,0 +1,3 @@
+// "Output it twice" means something different for every type.
+fn twice (x) { put { put $x; put $x } }
+pln { twice 21 } { twice ha } { twice [ho] } { twice (true) } { twice [k = v] }

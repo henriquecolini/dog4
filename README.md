@@ -5,6 +5,9 @@ It's a mix of Rust and Bash, it's the successor of [dog3](https://github.com/hen
 and it's built to be embedded — its day job is running code that strangers
 type into a Telegram bot, so it is fast, small, and sandboxed to the teeth.
 
+**[Try it in your browser](https://henriquecolini.github.io/dog4/)** — the
+playground runs dog4 compiled to WebAssembly.
+
 The following program prints "Hello, world!":
 
 ```dog

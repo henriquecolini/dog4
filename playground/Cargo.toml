@@ -1,0 +1,23 @@
+[package]
+name = "dog4-playground"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "dog4 compiled to WebAssembly for the browser playground."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+dog4 = { path = "..", default-features = false }
+serde_json = "1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+# Built on its own, not as part of the dog4 package.
+[workspace]

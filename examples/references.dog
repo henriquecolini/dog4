@@ -1,0 +1,8 @@
+// References let a function change your variables in place.
+fn swap (a: &, b: &) { let t = $a; a = $b; b = $t }
+fn bump_all (m: &map) { for k in $m { m[$k] += 1 } }
+x = left; y = right;
+swap &x &y;
+votes = [cats = 3, dogs = 9];
+bump_all &votes;
+pln $x $y $votes

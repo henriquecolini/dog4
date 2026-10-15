@@ -1,0 +1,9 @@
+// A block's value is the sum of everything it outputs, so loops are folds.
+scores = [alice = 12, bob = 30, carol = 7];
+total = for name, s in $scores { put $s };
+best = for name, s in $scores { put (if ($s > 10) { put [$name] }) };
+report = for name, s in $scores {
+    put [$name = "$({ round ($s * 100 / $total) })%"]
+};
+pln "total: $total, above 10: $best";
+pln $report

@@ -1,0 +1,3 @@
+// Pieces written without spaces are added together, left to right.
+a = 40; b = 2; xs = [x];
+pln $a$b "$a$b" answer:$a$b $xs$xs$xs

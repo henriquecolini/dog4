@@ -72,9 +72,13 @@ fn header(source: &str, key: &str) -> Vec<String> {
 /// Runs a script, returning its result text and whether it succeeded.
 fn run(file: &Path) -> Result<(String, bool), Failed> {
     let source = std::fs::read_to_string(file)?;
+    // Generous, but bounded: a runaway test must fail, not fill the disk.
     let mut limits = Limits {
         fuel: Some(200_000_000),
         timeout: Some(std::time::Duration::from_secs(20)),
+        max_str_bytes: 64 << 20,
+        max_collection_len: 10_000_000,
+        max_output_bytes: Some(1 << 20),
         ..Limits::default()
     };
     if header(&source, "limits").iter().any(|v| v == "sandbox") {

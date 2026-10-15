@@ -1,0 +1,7 @@
+nice try (type): can't add map to num
+418 teapot
+error: array or map too large
+ --> sandbox:9:16
+  |
+9 | println (try { range 1000000000 } catch e { put "never printed" })
+  |                ^^^^^^^^^^^^^^^^^

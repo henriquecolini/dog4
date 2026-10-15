@@ -18,7 +18,12 @@ BLESS=1 cargo test --test scripts                  # rewrite .out/.err expectati
 cargo test --test docs           # runs every ```dog block in README.md, MIGRATING.md, docs/*.md
 cargo clippy --all-targets --all-features -- -D warnings
 cargo bench --bench vm           # criterion benchmarks
+playground/build.sh              # build the browser playground (dog4 → wasm32) into playground/web
+node playground/test.mjs         # smoke-test the built .wasm
+playground/deploy.sh             # build and commit it to the gh-pages branch, then `git push origin gh-pages`
 ```
+
+The playground (`playground/`) is a separate crate (its own `[workspace]`) exporting a C-style API to JavaScript; `web/` is plain HTML/JS with a Web Worker and its own highlighter (`highlight.js`). Its examples menu is generated from `examples/*.dog`.
 
 ## Architecture
 

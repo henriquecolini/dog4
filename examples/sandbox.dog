@@ -1,0 +1,9 @@
+// limits: sandbox
+// Ordinary errors are values you can catch. Sandbox limits can't be caught.
+println (try { put ({ len [1 2] } + [k = v]) } catch e {
+    put "nice try ($e.kind): $e.message"
+});
+println (try { throw [code = 418, why = teapot] } catch e {
+    put "$e.value.code $e.value.why"
+});
+println (try { range 1000000000 } catch e { put "never printed" })

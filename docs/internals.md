@@ -138,3 +138,14 @@ limited by serde. Limit errors can't be caught.
 | `tests/robustness.rs` | random and generated programs under tight limits must not panic |
 | `benches/vm.rs` | criterion benchmarks |
 | `fuzz/` | the same robustness harness for `cargo +nightly fuzz run run` |
+| `playground/test.mjs` | the WebAssembly build, through the same interface the browser uses |
+
+## The playground
+
+`playground/` compiles dog4 to `wasm32-unknown-unknown` with no JavaScript glue
+library: the module exports `dog4_alloc`, `dog4_free`, `dog4_run` and
+`dog4_result_len`, and results come back as JSON. dog4 needs no imports from
+the host — there is no clock there, so the playground bounds scripts by fuel,
+and its random seed comes from JavaScript. `web/worker.js` runs the module off
+the main thread; `web/app.js` is the editor (a transparent textarea over
+highlighted text). `deploy.sh` publishes `web/` to the `gh-pages` branch.

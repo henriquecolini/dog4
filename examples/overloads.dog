@@ -1,0 +1,10 @@
+// dog4 picks the overload whose parameter types match.
+fn describe (x: num) { put "the number $x, doubled is $($x * 2)" }
+fn describe (x: arr) { put "a list of $({ len $x }) things" }
+fn describe (x: map) { put "a map with keys $({ join { keys $x } ", " })" }
+fn describe (x: str) { put "just some text: '$x'" }
+pln { describe 21 };
+pln { describe "21" };
+pln { describe [a b c] };
+pln { describe [hp = 10, mp = 3] };
+pln { describe woof }
