@@ -1,2 +1,2 @@
-fn ok () { put fine }
+pub fn ok () { put fine }
 pln (1 +;

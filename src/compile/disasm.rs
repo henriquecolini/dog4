@@ -45,7 +45,7 @@ fn write_proto(proto: &Proto, out: &mut String, indent: &str) {
         write_proto(child, out, &nested);
     }
     for module in proto.modules.iter() {
-        let _ = writeln!(out, "{nested}module (globals {:?})", module.globals);
+        let _ = writeln!(out, "{nested}module (globals {:?})", module.scope.names());
         write_proto(&module.main, out, &nested);
     }
 }

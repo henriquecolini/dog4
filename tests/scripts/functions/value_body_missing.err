@@ -1,0 +1,5 @@
+error: expected the function body: a value or `{ … }`
+ --> value_body_missing:1:9
+  |
+1 | fn f (x);
+  |         ^

@@ -1074,11 +1074,7 @@ impl Vm {
                 }
                 Op::MakeModule(m) => {
                     let module = proto.modules[m as usize].clone();
-                    let mut scope = ModuleScope::default();
-                    for name in &module.globals {
-                        scope.global(name);
-                    }
-                    let env = self.new_env(func.module.name.clone(), scope);
+                    let env = self.new_env(func.module.name.clone(), module.scope.clone());
                     self.frames[fi].ip = ip;
                     t!(self.enter_module(module.main.clone(), env, FrameKind::Module { id: None }));
                     reload!();

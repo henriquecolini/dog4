@@ -191,7 +191,7 @@ impl Parser<'_> {
             }
         }
         if self.at_form_keyword("fn") {
-            return self.lambda_expr();
+            return self.lambda_expr(WordMode::Command);
         }
         if self.at_form_keyword("use") {
             self.pos += 3;

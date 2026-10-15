@@ -182,7 +182,7 @@ impl ModuleProvider for Table {
 
 let table = Table(HashMap::from([(
     "users/ana/greet".to_string(),
-    "fn hi (name: str) { put \"hi $name\" }".to_string(),
+    "pub fn hi (name: str) { put \"hi $name\" }".to_string(),
 )]));
 let mut rt = Builder::new().provider(table).build();
 let out = rt.run("users/ana/main", r#"use "./greet"; greet.hi Bob"#).unwrap();
@@ -194,7 +194,7 @@ assert_eq!(out.to_string(), "hi Bob");
 ```rust
 use dog4::{MemoryProvider, Runtime, Value};
 
-let modules = MemoryProvider::new().with("math", "fn area (w: num, h: num) { put ($w * $h) }");
+let modules = MemoryProvider::new().with("math", "pub fn area (w: num, h: num) { put ($w * $h) }");
 let mut rt = Runtime::builder().provider(modules).build();
 let math = rt.import("math").unwrap();
 let Value::Map(map) = &math else { unreachable!() };
@@ -255,7 +255,7 @@ fn handle(code: &str, user_modules: MemoryProvider) -> String {
     }
 }
 
-let modules = MemoryProvider::new().with("dice", "fn d (n: num) { put ($n * 0 + 4) }");
+let modules = MemoryProvider::new().with("dice", "pub fn d (n: num) { put ($n * 0 + 4) }");
 assert_eq!(handle(r#"use "dice"; pln rolled { dice.d 6 }"#, modules), "rolled 4\n");
 let reply = handle("while true {}", MemoryProvider::new());
 assert!(reply.starts_with("error: ran out of fuel"));

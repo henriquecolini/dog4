@@ -26,6 +26,8 @@ use crate::vm::{SigParam, Signature};
 pub struct ModuleScope {
     names: Vec<Rc<str>>,
     index: FxHashMap<Rc<str>, u32>,
+    /// For each slot, whether it was declared `pub`.
+    public: Vec<bool>,
 }
 
 impl ModuleScope {
@@ -37,7 +39,18 @@ impl ModuleScope {
         let i = self.names.len() as u32;
         self.names.push(name.clone());
         self.index.insert(name.clone(), i);
+        self.public.push(false);
         i
+    }
+
+    /// Exports global `slot` from the module.
+    pub fn set_public(&mut self, slot: u32) {
+        self.public[slot as usize] = true;
+    }
+
+    /// Whether global `slot` is exported.
+    pub fn is_public(&self, slot: u32) -> bool {
+        self.public.get(slot as usize).copied().unwrap_or(false)
     }
 
     /// The slot of global `name`, if it exists.
@@ -99,7 +112,10 @@ pub fn compile_module(
             _ => None,
         };
         if let Some(name) = name {
-            compiler.module.global(name);
+            let slot = compiler.module.global(name);
+            if stmt.public {
+                compiler.module.set_public(slot);
+            }
         }
     }
     let sig = Rc::new(Signature::new(Vec::new(), None));
@@ -553,6 +569,13 @@ impl Compiler<'_> {
 
     fn stmt(&mut self, stmt: &Stmt) -> Result<()> {
         self.span = stmt.span;
+        if stmt.public && !self.at_module_top() {
+            return Err(Error::new(
+                ErrorKind::Syntax,
+                "`pub` only works at the top level of a module",
+            )
+            .at(self.source, stmt.span));
+        }
         match &stmt.kind {
             StmtKind::Output(expr) => {
                 self.expr(expr)?;
@@ -588,10 +611,7 @@ impl Compiler<'_> {
             StmtKind::Mod { name, body } => {
                 let mut scope = ModuleScope::default();
                 let main = compile_module(body, self.prelude, &mut scope, self.source)?;
-                let module = Rc::new(ModuleProto {
-                    main,
-                    globals: scope.names,
-                });
+                let module = Rc::new(ModuleProto { main, scope });
                 let f = self.f();
                 f.modules.push(module);
                 let index = (f.modules.len() - 1) as u32;

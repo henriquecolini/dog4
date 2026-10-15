@@ -102,9 +102,9 @@ to cells by `BindRef`/`DeclRef`, so scripts never hold one as a value.
 
 **Modules.** `use` asks native modules, then the cache, then the provider.
 Scripts run in a frame of kind `Module`; when it returns, its `ModuleEnv`'s
-non-`_` globals become the map, which is cached. A loading stack detects
-cycles. Inline `mod` blocks are compiled separately and run the same way
-(uncached).
+`pub` globals (flagged in its `ModuleScope`) become the map, which is cached.
+A loading stack detects cycles. Inline `mod` blocks are compiled separately and
+run the same way (uncached).
 
 ## Values and memory
 

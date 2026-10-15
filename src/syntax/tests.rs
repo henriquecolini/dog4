@@ -405,6 +405,15 @@ fn functions() {
         p("map $l fn (x) { put $x }"),
         "(call $map $l (fn <lambda> (x:any) {(call $put $x)}))"
     );
+    // A value body is the block `{ put value }`.
+    assert_eq!(
+        p(r#"fn f (n) "hi $n""#),
+        r#"(fn f (n:any) {(interp "hi " $n)})"#
+    );
+    assert_eq!(
+        p("fs = [fn (x) $x, fn (x) ($x + 1)]"),
+        "(= fs (arr (fn <lambda> (x:any) {$x}) (fn <lambda> (x:any) {(+ $x 1)})))"
+    );
     assert_eq!(p("f &x &y.z[0]"), "(call $f &x &y.z[0])");
     assert_eq!(p("f $%args"), "(call $f $%$args)");
 }
@@ -417,6 +426,8 @@ fn function_errors() {
     assert!(err("fn f (%a: &) {}").contains("can't be a reference"));
     assert!(err("fn () {}").contains("give it a name"));
     assert!(err("fn f").contains("expected `(`"));
+    assert!(err("fn f ()").contains("expected the function body"));
+    assert!(err("x = [fn (x)]").contains("expected the function body"));
 }
 
 #[test]

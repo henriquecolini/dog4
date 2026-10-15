@@ -38,7 +38,7 @@ fn values_keep_their_types() {
 fn import_and_call_module_functions() {
     let provider = MemoryProvider::new().with(
         "greet",
-        "fn hello (name: str) { put \"hi $name\" } fn add (a: num, b: num) { put ($a + $b) }",
+        "pub fn hello (name: str) { put \"hi $name\" } pub fn add (a: num, b: num) { put ($a + $b) }",
     );
     let mut rt = Runtime::builder().provider(provider).build();
     let module = rt.import("greet").unwrap();
@@ -121,7 +121,8 @@ fn eval_sessions_remember_globals() {
 
 #[test]
 fn modules_are_cached_across_runs() {
-    let provider = MemoryProvider::new().with("counter", "n = 0; fn next () { n += 1; put $n }");
+    let provider =
+        MemoryProvider::new().with("counter", "n = 0; pub fn next () { n += 1; put $n }");
     let mut rt = Runtime::builder().provider(provider).build();
     assert_eq!(run(&mut rt, r#"use "counter"; counter.next"#), "1");
     assert_eq!(run(&mut rt, r#"use "counter"; counter.next"#), "2");
@@ -130,7 +131,7 @@ fn modules_are_cached_across_runs() {
 #[test]
 fn chain_provider_and_relative_names() {
     let first = MemoryProvider::new().with("app/main", r#"use "./util"; put { util.twice 4 }"#);
-    let second = MemoryProvider::new().with("app/util", "fn twice (x: num) { put ($x * 2) }");
+    let second = MemoryProvider::new().with("app/util", "pub fn twice (x: num) { put ($x * 2) }");
     let mut rt = Runtime::builder()
         .provider(ChainProvider::new().with(first).with(second))
         .build();

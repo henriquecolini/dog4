@@ -1,0 +1,5 @@
+error: `pub` only works at the top level of a module
+ --> pub_nested:2:5
+  |
+2 |     pub x = 1;
+  |     ^^^^^^^^^

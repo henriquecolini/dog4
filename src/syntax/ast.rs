@@ -22,6 +22,8 @@ pub struct Block {
 pub struct Stmt {
     /// What kind of statement.
     pub kind: StmtKind,
+    /// Marked `pub`: the name it declares is exported from its module.
+    pub public: bool,
     /// Source span.
     pub span: Span,
 }

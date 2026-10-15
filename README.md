@@ -289,16 +289,16 @@ oops: `risky` expects a num for `x`, got str "abc"
 
 ## Modules
 
-A module is a file, and a file is a map of its top-level names (except the
-ones starting with `_`). Modules are found by the host program, so they can
-live on disk, in memory, or in a database:
+A module is a file, and a file is a map of the top-level names it marks
+`pub`. Modules are found by the host program, so they can live on disk, in
+memory, or in a database:
 
 ```dog
 use "greet";
 greet.hi Bob;
 pln { keys $greet };
 mod shapes {
-    fn square (side: num) { put ($side * $side) }
+    pub fn square (side: num) { put ($side * $side) }
 }
 pln { shapes.square 4 }
 ```
@@ -340,7 +340,7 @@ bot.def("reply", "%text", |_, args| {
 let mut runtime = Builder::sandboxed()
     .limits(Limits::sandbox())
     .output(OutputBuffer::default())
-    .provider(MemoryProvider::new().with("util", "fn shout (s: str) { put { upper $s } }"))
+    .provider(MemoryProvider::new().with("util", "pub fn shout (s: str) { put { upper $s } }"))
     .module("bot", bot.into_value())
     .build();
 

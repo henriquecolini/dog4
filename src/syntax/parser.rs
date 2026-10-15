@@ -63,7 +63,7 @@ pub(super) struct Parser<'a> {
 /// Keywords that start a statement.
 const STMT_KEYWORDS: &[&str] = &[
     "fn", "mod", "use", "let", "return", "clear", "break", "continue", "throw", "if", "while",
-    "for", "try", "else", "catch",
+    "for", "try", "else", "catch", "pub",
 ];
 
 pub(super) fn is_ident_start(c: char) -> bool {
@@ -277,6 +277,9 @@ impl<'a> Parser<'a> {
 
     fn stmt(&mut self) -> Result<Stmt> {
         let start = self.pos;
+        if self.peek_ident() == Some("pub") {
+            return self.pub_stmt();
+        }
         let kind = match self.peek_ident() {
             Some(word) if STMT_KEYWORDS.contains(&word) => self.keyword_stmt(word)?,
             _ => match self.peek() {
@@ -294,8 +297,35 @@ impl<'a> Parser<'a> {
         };
         Ok(Stmt {
             kind,
+            public: false,
             span: self.span_from(start),
         })
+    }
+
+    /// `pub` followed by a declaration: `fn`, `mod`, `use`, `let` or `name = value`.
+    fn pub_stmt(&mut self) -> Result<Stmt> {
+        let start = self.pos;
+        let keyword_span = Span::new(start, start + 3);
+        self.pos += 3;
+        self.skip_trivia()?;
+        const MISPLACED: &str =
+            "`pub` must be followed by `fn`, `mod`, `use`, `let` or `name = value`";
+        if self.at_stmt_end() || self.peek_ident() == Some("pub") {
+            return Err(self.error_at(MISPLACED, keyword_span));
+        }
+        let mut stmt = self.stmt()?;
+        let declares = match &stmt.kind {
+            StmtKind::Fn(_) | StmtKind::Mod { .. } | StmtKind::Use { .. } => true,
+            StmtKind::Let { value, .. } => matches!(value, LetValue::Value(_)),
+            StmtKind::Assign { target, op, .. } => *op == UpdateOp::Set && target.path.is_empty(),
+            _ => false,
+        };
+        if !declares {
+            return Err(self.error_at(MISPLACED, keyword_span));
+        }
+        stmt.public = true;
+        stmt.span = self.span_from(start);
+        Ok(stmt)
     }
 
     fn keyword_stmt(&mut self, word: &str) -> Result<StmtKind> {
@@ -519,33 +549,47 @@ impl<'a> Parser<'a> {
 
     // ----- functions -----------------------------------------------------------------
 
-    /// `fn name (params) { … }`
+    /// `fn name (params) { … }` or `fn name (params) value`
     fn fn_decl(&mut self) -> Result<Rc<FnDecl>> {
         let start = self.pos;
         self.pos += 2;
         self.skip_trivia()?;
         let name = self.expect_ident("a function name")?;
-        self.fn_rest(start, name)
+        self.fn_rest(start, name, WordMode::Command)
     }
 
-    /// `fn (params) { … }`
-    pub(super) fn lambda(&mut self) -> Result<Rc<FnDecl>> {
+    /// `fn (params) { … }` or `fn (params) value`
+    pub(super) fn lambda(&mut self, mode: WordMode) -> Result<Rc<FnDecl>> {
         let start = self.pos;
         self.pos += 2;
-        self.fn_rest(start, "<lambda>".into())
+        self.fn_rest(start, "<lambda>".into(), mode)
     }
 
-    fn fn_rest(&mut self, start: usize, name: Ident) -> Result<Rc<FnDecl>> {
+    fn fn_rest(&mut self, start: usize, name: Ident, mode: WordMode) -> Result<Rc<FnDecl>> {
         self.skip_trivia()?;
         if self.peek() != Some('(') {
             return Err(self.error("expected `(` to start the parameter list"));
         }
         let (params, rest) = self.params()?;
         self.skip_trivia()?;
-        if self.peek() != Some('{') {
-            return Err(self.error("expected `{` to start the function body"));
-        }
-        let body = self.block()?;
+        let body = if self.peek() == Some('{') {
+            self.block()?
+        } else {
+            if self.at_stmt_end() || matches!(self.peek(), Some(')' | ']' | ',')) {
+                return Err(self.error("expected the function body: a value or `{ … }`"));
+            }
+            // A value body returns that value: `fn f (x) value` is `fn f (x) { put value }`.
+            let value = self.value(mode)?;
+            let span = value.span;
+            Block {
+                stmts: vec![Stmt {
+                    kind: StmtKind::Output(value),
+                    public: false,
+                    span,
+                }],
+                span,
+            }
+        };
         let span = self.span_from(start);
         Ok(Rc::new(FnDecl {
             name,
@@ -696,7 +740,7 @@ impl<'a> Parser<'a> {
                     }
                 }
                 if self.at_form_keyword("fn") {
-                    return self.lambda_expr();
+                    return self.lambda_expr(mode);
                 }
                 return self.word(mode);
             }
@@ -724,8 +768,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub(super) fn lambda_expr(&mut self) -> Result<Expr> {
-        let decl = self.lambda()?;
+    pub(super) fn lambda_expr(&mut self, mode: WordMode) -> Result<Expr> {
+        let decl = self.lambda(mode)?;
         let span = decl.span;
         Ok(Expr::new(ExprKind::Lambda(decl), span))
     }

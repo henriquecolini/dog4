@@ -1,2 +1,2 @@
 use "../util";
-fn quadruple (x: num) { put (util.double(util.double($x))) }
+pub fn quadruple (x: num) { put (util.double(util.double($x))) }

@@ -22,7 +22,7 @@ fn tight_limits() -> Limits {
 
 fn run(source: &str) {
     let modules = MemoryProvider::new()
-        .with("m", "x = 1; fn f (a) { put $a }")
+        .with("m", "pub x = 1; pub fn f (a) { put $a }")
         .with("loop", "use \"loop\"");
     let mut rt = Builder::new()
         .limits(tight_limits())

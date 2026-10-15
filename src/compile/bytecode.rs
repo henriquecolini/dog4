@@ -10,6 +10,7 @@
 
 use std::rc::Rc;
 
+use super::compiler::ModuleScope;
 use crate::syntax::{SourceId, Span};
 use crate::value::{UpdateOp, Value};
 use crate::vm::Signature;
@@ -291,13 +292,13 @@ pub struct Proto {
     pub source: SourceId,
 }
 
-/// A compiled module: its top level plus the names of its globals.
+/// A compiled module: its top level plus its globals.
 #[derive(Debug)]
 pub struct ModuleProto {
     /// The top-level code.
     pub main: Rc<Proto>,
-    /// Global names, indexed like `LoadGlobal` operands.
-    pub globals: Vec<Rc<str>>,
+    /// Global names (indexed like `LoadGlobal` operands) and which are `pub`.
+    pub scope: ModuleScope,
 }
 
 #[cfg(test)]

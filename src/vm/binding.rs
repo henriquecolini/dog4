@@ -231,7 +231,7 @@ impl ModuleEnv {
         Error::name_error(format!("`{name}` is used before it has a value"))
     }
 
-    /// The module's map: every initialized global not starting with `_`.
+    /// The module's map: every initialized `pub` global.
     pub fn exports(&self) -> Value {
         let scope = self.scope.borrow();
         let globals = self.globals.borrow();
@@ -239,8 +239,9 @@ impl ModuleEnv {
             .names()
             .iter()
             .zip(globals.iter())
-            .filter(|(name, _)| !name.starts_with('_'))
-            .filter_map(|(name, value)| Some((name.clone(), value.clone()?)))
+            .enumerate()
+            .filter(|(slot, _)| scope.is_public(*slot as u32))
+            .filter_map(|(_, (name, value))| Some((name.clone(), value.clone()?)))
             .collect();
         Value::map(map)
     }

@@ -18,11 +18,11 @@ thread_local! {
 const MODULES: &[(&str, &str)] = &[
     (
         "greet",
-        "_greeting = Hello;\nfn hi (name: str) { pln $_greeting $name }\nloaded = yes",
+        "greeting = Hello;\npub fn hi (name: str) { pln $greeting $name }\npub loaded = yes",
     ),
     (
         "shapes",
-        "fn square (side: num) { put ($side * $side) }\nfn circle (r: num) { put (3.14159 * $r * $r) }",
+        "pub fn square (side: num) { put ($side * $side) }\npub fn circle (r: num) { put (3.14159 * $r * $r) }",
     ),
 ];
 

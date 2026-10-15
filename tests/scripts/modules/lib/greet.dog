@@ -1,5 +1,5 @@
-_greeting = Hello;
-fn hi (name: str) { pln $_greeting $name }
-loaded = yes;
+greeting = Hello;
+pub fn hi (name: str) { pln $greeting $name }
+pub loaded = yes;
 println "(greet loaded)";
 pln "top-level output of an imported module is discarded";

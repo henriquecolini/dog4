@@ -73,11 +73,11 @@ fn provider() -> MemoryProvider {
     MemoryProvider::new()
         .with(
             "greet",
-            "_greeting = Hello;\nfn hi (name: str) { pln $_greeting $name }\nloaded = yes",
+            "greeting = Hello;\npub fn hi (name: str) { pln $greeting $name }\npub loaded = yes",
         )
         .with(
             "shapes/area",
-            "fn square (side: num) { put ($side * $side) }",
+            "pub fn square (side: num) { put ($side * $side) }",
         )
 }
 

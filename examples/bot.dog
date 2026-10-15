@@ -1,5 +1,5 @@
 // A tiny chat-bot command dispatcher: handlers live in a map of functions.
-_counts = [=];
+counts = [=];
 
 commands = [
     roll = fn (args) {
@@ -8,8 +8,8 @@ commands = [
     },
     count = fn (args) {
         word = $args[0] ?? nothing;
-        _counts[$word] = ($_counts[$word] ?? 0) + 1;
-        put "$word: $_counts[$word]"
+        counts[$word] = ($counts[$word] ?? 0) + 1;
+        put "$word: $counts[$word]"
     },
     shout = fn (args) { put "$({ upper { join $args } })!!!" },
     help = fn (args) { put "commands: $({ join { keys $commands } ", " })" },

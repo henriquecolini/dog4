@@ -1,10 +1,10 @@
 // A tiny event system: handlers are lambdas kept in a map of arrays.
-_handlers = [=];
+handlers = [=];
 fn on (event: str, f: fn) {
-    _handlers[$event] = ($_handlers[$event] ?? []) + [$f]
+    handlers[$event] = ($handlers[$event] ?? []) + [$f]
 }
 fn emit (event: str, data) {
-    put for f in ($_handlers[$event] ?? []) { put ($f($data)) }
+    put for f in ($handlers[$event] ?? []) { put ($f($data)) }
 }
 on greet fn (who) { pln "hello, $who!" };
 on greet fn (who) { pln "(waves at $who)" };

@@ -6,7 +6,7 @@
 
 const KEYWORDS = new Set([
   "fn", "if", "else", "while", "for", "in", "split", "try", "catch", "throw",
-  "return", "let", "use", "as", "mod", "break", "continue", "clear",
+  "return", "let", "use", "as", "mod", "pub", "break", "continue", "clear",
   "true", "false", "null",
 ]);
 const TYPES = new Set(["num", "str", "arr", "map", "fn", "bool", "any", "null"]);

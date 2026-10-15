@@ -1,1 +1,1 @@
-fn double (x: num) { put ($x * 2) }
+pub fn double (x: num) { put ($x * 2) }

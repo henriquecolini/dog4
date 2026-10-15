@@ -259,10 +259,27 @@ pln { sum_to 4 } $i
 
 ```dog ignore
 fn name (a, b: num, c: str|arr, d: num?, e: &map, f: &, %rest: str) { body }
+fn name (params) value
 lambda = fn (x) { body }
+lambda = fn (x) value
 ```
 
 * A function returns the fold of its body, or the value of `return`.
+* The body can also be a **single value**, like the branches of `if`:
+  `fn f (x) value` is `fn f (x) { put value }`. It is one value, so a command
+  still needs braces (`fn f (x) { upper $x }`); `fn f (x) upper $x` would make
+  `upper` the body.
+
+```dog
+fn greet (name) "Hello $name"
+fn square (x: num) ($x * $x)
+fn sign (x: num) if ($x < 0) -1 else if ($x > 0) 1 else 0
+pln { greet Ana } { square 4 } { sign -3 } { map [1 2] fn (x) [$x $x] }
+```
+```text
+Hello Ana 16 -1 [[1 1] [2 2]]
+```
+
 * `fn` declarations are **hoisted** within their block: they can be used
   before they are defined and can call each other.
 * Several `fn` with the same name in the same block form one **overload set**.
@@ -321,8 +338,12 @@ pln $data
   picks the variable. `(use $expr)` is an expression giving the module.
 * Names are resolved by the host's module provider; `./x` and `../x` are
   relative to the importing module.
-* A module is the **map of its top-level names** after it has run, except names
-  starting with `_`. Its top-level output is discarded.
+* A module is the **map of its `pub` top-level names** after it has run. Its
+  top-level output is discarded.
+* `pub` goes before a top-level `fn`, `mod`, `use`, `let` or `name = value`.
+  A name is exported if any of its top-level declarations is `pub` (so one `pub
+  fn` exports the whole overload set). The module's own code sees every name,
+  `pub` or not. `pub` anywhere but a module's top level is an error.
 * Each module runs once per runtime; later `use`s get the same map. Module
   functions see their module's variables live; the map itself is a snapshot.
 * Circular imports are an error.
@@ -331,14 +352,15 @@ pln $data
 
 ```dog
 mod counter {
-    n = 0;
-    _secret = 1;
-    fn next () { n += 1; put $n }
+    pub n = 0;
+    step = 1;
+    pub fn next () { n += $step; put $n }
 }
-pln { counter.next } { counter.next } { keys $counter }
+use "shapes/area" as area;
+pln { counter.next } { counter.next } { keys $counter } { keys $area }
 ```
 ```text
-1 2 [n next]
+1 2 [n next] [square]
 ```
 
 ## 11. Errors
