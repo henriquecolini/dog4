@@ -11,7 +11,7 @@
   --accent: #2f4fd8;
   --accent-fg: #ffffff;
   --error-line: #fde3e4;
-  --selection: #c9d3ff;
+  --selection: rgba(47, 79, 216, 0.2);
 
   --t-cmd: #2f4fd8;
   --t-var: #0a7d6b;
@@ -35,7 +35,7 @@
   :root {
     --bg: #14161f; --fg: #e6e8f0; --muted: #9aa0b6; --rule: #2a2e3d;
     --panel: #1b1e2a; --panel-edge: #2c3042; --out: #10121a;
-    --accent: #8ea2ff; --accent-fg: #10121a; --error-line: #3d1d22; --selection: #34407a;
+    --accent: #8ea2ff; --accent-fg: #10121a; --error-line: #3d1d22; --selection: rgba(142, 162, 255, 0.3);
     --t-cmd: #8ea2ff; --t-var: #4fd1b8; --t-kw: #e58ad9; --t-str: #a8d46a; --t-esc: #ffad5c;
     --t-num: #ffad5c; --t-type: #6fb8f5; --t-key: #b9a3ff; --t-com: #6e748c;
     --t-op: #9aa0b6; --t-err: #ff7a7f;
@@ -190,6 +190,7 @@ textarea {
   caret-color: var(--fg);
   outline: none;
 }
+/* The selection must be translucent: the text it covers is painted underneath. */
 textarea::selection { background: var(--selection); color: transparent; }
 
 .t-cmd { color: var(--t-cmd); font-weight: 650; }
