@@ -52,7 +52,29 @@ impl ModuleScope {
 }
 
 /// Names the compiler can resolve to prelude values.
-pub type PreludeNames = FxHashMap<Rc<str>, u32>;
+#[derive(Debug, Default, Clone)]
+pub struct PreludeNames {
+    names: FxHashMap<Rc<str>, u32>,
+    builtin_put: Option<u32>,
+}
+
+impl PreludeNames {
+    /// The prelude slot of `name`.
+    pub fn get(&self, name: &str) -> Option<u32> {
+        self.names.get(name).copied()
+    }
+
+    /// Records that `name` lives in prelude slot `slot`.
+    pub fn insert(&mut self, name: Rc<str>, slot: u32) {
+        self.names.insert(name, slot);
+    }
+
+    /// Marks `slot` as holding the builtin `put`, which the compiler may inline
+    /// (`put x` is just `x`). Not set when the host replaced `put`.
+    pub fn set_builtin_put(&mut self, slot: Option<u32>) {
+        self.builtin_put = slot;
+    }
+}
 
 /// Compiles a module's top level. New globals are added to `scope`.
 pub fn compile_module(
@@ -387,7 +409,7 @@ impl Compiler<'_> {
         if let Some(global) = self.module.get(name) {
             return Some(Resolved::Global(global));
         }
-        self.prelude.get(name).map(|&p| Resolved::Prelude(p))
+        self.prelude.get(name).map(Resolved::Prelude)
     }
 
     fn resolve_upval(&mut self, func: usize, name: &str) -> Option<u16> {
@@ -451,17 +473,29 @@ impl Compiler<'_> {
     // ----- blocks and statements --------------------------------------------------------
 
     /// Hoists the block's functions, then compiles its statements into one accumulator.
+    ///
+    /// A block none of whose statements output anything (only assignments,
+    /// discarded loops, …) always evaluates to `null`, so it skips the accumulator.
     fn block_body(&mut self, stmts: &[Stmt]) -> Result<()> {
         self.hoist_fns(stmts)?;
-        self.emit(Op::AccBegin);
+        let silent = stmts
+            .iter()
+            .all(|s| !matches!(s.kind, StmtKind::Output(_) | StmtKind::Clear(_)));
+        if !silent {
+            self.emit(Op::AccBegin);
+        }
         for stmt in stmts {
             self.stmt(stmt)?;
         }
-        self.emit(Op::AccEnd);
+        self.emit(if silent { Op::Null } else { Op::AccEnd });
         Ok(())
     }
 
     fn block(&mut self, block: &Block) -> Result<()> {
+        if block.stmts.is_empty() {
+            self.emit(Op::Null);
+            return Ok(());
+        }
         self.open_scope();
         self.block_body(&block.stmts)?;
         self.close_scope();
@@ -900,14 +934,25 @@ impl Compiler<'_> {
 
     fn for_loop(&mut self, for_loop: &ForLoop) -> Result<()> {
         self.emit(Op::AccBegin);
-        self.expr(&for_loop.iter)?;
-        if let Some(split) = &for_loop.split {
-            self.expr(split)?;
+        match (&for_loop.iter.kind, &for_loop.split) {
+            // `for i in (a..b)` counts without building the array.
+            (ExprKind::Binary(BinOp::Range, lo, hi), None) => {
+                self.expr(lo)?;
+                self.expr(hi)?;
+                self.span = for_loop.iter.span;
+                self.emit(Op::IterRange);
+            }
+            _ => {
+                self.expr(&for_loop.iter)?;
+                if let Some(split) = &for_loop.split {
+                    self.expr(split)?;
+                }
+                self.span = for_loop.iter.span;
+                self.emit(Op::IterInit {
+                    split: for_loop.split.is_some(),
+                });
+            }
         }
-        self.span = for_loop.iter.span;
-        self.emit(Op::IterInit {
-            split: for_loop.split.is_some(),
-        });
         self.emit(Op::LoopEnter);
         self.f().loops.push(LoopCtx {
             breaks: Vec::new(),
@@ -972,8 +1017,22 @@ impl Compiler<'_> {
 
     fn call(&mut self, callee: &Expr, args: &[Arg], span: Span) -> Result<()> {
         if let ExprKind::Var(name) = &callee.kind {
-            if self.resolve(name).is_none() {
+            let resolved = self.resolve(name);
+            if resolved.is_none() {
                 return Err(self.error(format!("unknown command `{name}`"), callee.span));
+            }
+            // The builtin `put x` outputs `x` unchanged: compile it to just `x`.
+            if let (Some(Resolved::Prelude(p)), Some(put)) = (resolved, self.prelude.builtin_put) {
+                if p == put {
+                    match args {
+                        [] => {
+                            self.emit(Op::Null);
+                            return Ok(());
+                        }
+                        [Arg::Value(value)] => return self.expr(value),
+                        _ => {}
+                    }
+                }
             }
         }
         self.expr(callee)?;

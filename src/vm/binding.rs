@@ -199,6 +199,17 @@ impl ModuleEnv {
         meter: &mut Meter,
     ) -> Result<()> {
         let mut globals = self.globals.borrow_mut();
+        // `count += 1` on whole numbers: skip the general path.
+        if keys.is_empty() && op == UpdateOp::Add {
+            if let (Some(Some(Value::Int(x))), Value::Int(y)) =
+                (globals.get_mut(slot as usize), &value)
+            {
+                if let Some(r) = x.checked_add(*y) {
+                    *x = r;
+                    return Ok(());
+                }
+            }
+        }
         match globals.get_mut(slot as usize) {
             Some(Some(current)) => update_path(current, keys, op, value, meter),
             _ => {

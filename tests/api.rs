@@ -27,7 +27,9 @@ fn run_returns_the_output_and_print_goes_to_the_sink() {
 #[test]
 fn values_keep_their_types() {
     let mut rt = Runtime::new();
-    let v = rt.run("main", "put [n = 1, l = [a (2.5)], ok = true]").unwrap();
+    let v = rt
+        .run("main", "put [n = 1, l = [a (2.5)], ok = true]")
+        .unwrap();
     let json = dog4::value::to_json(&v).unwrap();
     assert_eq!(json.to_string(), r#"{"n":1,"l":["a",2.5],"ok":true}"#);
 }
@@ -40,14 +42,23 @@ fn import_and_call_module_functions() {
     );
     let mut rt = Runtime::builder().provider(provider).build();
     let module = rt.import("greet").unwrap();
-    let Value::Map(map) = &module else { panic!("module should be a map") };
+    let Value::Map(map) = &module else {
+        panic!("module should be a map")
+    };
     let hello = map.get("hello").unwrap().clone();
-    assert_eq!(rt.call(&hello, vec![Value::str("Ana")]).unwrap().to_string(), "hi Ana");
+    assert_eq!(
+        rt.call(&hello, vec![Value::str("Ana")])
+            .unwrap()
+            .to_string(),
+        "hi Ana"
+    );
     let add = map.get("add").unwrap().clone();
     // Arguments are coerced exactly as for script calls.
     let sum = rt.call(&add, vec![Value::str("2"), Value::Int(3)]).unwrap();
     assert_eq!(sum, Value::Int(5));
-    let err = rt.call(&add, vec![Value::str("x"), Value::Int(3)]).unwrap_err();
+    let err = rt
+        .call(&add, vec![Value::str("x"), Value::Int(3)])
+        .unwrap_err();
     assert_eq!(err.kind(), ErrorKind::Type);
 }
 
@@ -61,11 +72,17 @@ fn native_modules_with_host_state() {
             Value::Arr(items) => items.iter().map(|v| v.to_string()).collect(),
             _ => Vec::new(),
         };
-        log.borrow_mut().push(format!("{}: {}", args[0], text.join(" ")));
+        log.borrow_mut()
+            .push(format!("{}: {}", args[0], text.join(" ")));
         Ok(Value::Null)
     });
-    let mut rt = Runtime::builder().module("telegram", telegram.into_value()).build();
-    run(&mut rt, r#"use "telegram"; telegram.send 42 hello there; telegram.send "7" bye"#);
+    let mut rt = Runtime::builder()
+        .module("telegram", telegram.into_value())
+        .build();
+    run(
+        &mut rt,
+        r#"use "telegram"; telegram.send 42 hello there; telegram.send "7" bye"#,
+    );
     assert_eq!(*sent.borrow(), ["42: hello there", "7: bye"]);
 }
 
@@ -73,7 +90,10 @@ fn native_modules_with_host_state() {
 fn host_globals_can_add_and_override_names() {
     let mut rt = Runtime::builder()
         .global("answer", Value::Int(42))
-        .global("put", Value::native("put", "%args", |_, _| Ok(Value::str("overridden"))))
+        .global(
+            "put",
+            Value::native("put", "%args", |_, _| Ok(Value::str("overridden"))),
+        )
         .build();
     assert_eq!(run(&mut rt, "put $answer"), "overridden");
     let mut rt = Runtime::builder().global("answer", Value::Int(42)).build();
@@ -88,7 +108,10 @@ fn natives_can_call_back_into_scripts() {
         vm.call(&f, vec![once])
     });
     let mut rt = Runtime::builder().global("twice", twice).build();
-    assert_eq!(run(&mut rt, "put { twice fn (x) { put ($x * 3) } 2 }"), "18");
+    assert_eq!(
+        run(&mut rt, "put { twice fn (x) { put ($x * 3) } 2 }"),
+        "18"
+    );
 }
 
 #[test]
@@ -166,14 +189,19 @@ fn errors_carry_kind_location_trace_and_value() {
         .run("main", "fn f () { throw [code = 7] }\nfn g () { f }\ng")
         .unwrap_err();
     assert_eq!(err.kind(), ErrorKind::Thrown);
-    let Value::Map(value) = err.value() else { panic!("thrown value") };
+    let Value::Map(value) = err.value() else {
+        panic!("thrown value")
+    };
     assert_eq!(value.get("code"), Some(&Value::Int(7)));
     let loc = err.location().unwrap();
     assert_eq!((loc.line, loc.col, &*loc.file), (1, 11, "main"));
     let names: Vec<&str> = err.trace().iter().map(|t| &*t.function).collect();
     assert_eq!(names, ["f", "g"]);
     let text = err.to_string();
-    assert!(text.starts_with("error: {\"code\": 7}\n --> main:1:11"), "{text}");
+    assert!(
+        text.starts_with("error: {\"code\": 7}\n --> main:1:11"),
+        "{text}"
+    );
 }
 
 #[test]
@@ -201,7 +229,9 @@ fn dropping_a_runtime_frees_reference_cycles() {
     // that captures itself (a cycle through a cell). When the runtime is
     // dropped, the cycle must be broken and our probe uniquely owned again.
     let probe = Value::native("probe", "", |_, _| Ok(Value::Null));
-    let Value::Func(probe_rc) = &probe else { unreachable!() };
+    let Value::Func(probe_rc) = &probe else {
+        unreachable!()
+    };
     let probe_rc = probe_rc.clone();
     {
         let mut rt = Runtime::builder().global("probe", probe.clone()).build();

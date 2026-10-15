@@ -96,15 +96,21 @@ impl Builder {
         let library = stdlib::prelude(&|cap| !denied.contains(&cap));
         let mut prelude = Vec::new();
         let mut names = PreludeNames::default();
+        let put_overridden = self.globals.iter().any(|(name, _)| &**name == "put");
         for (name, value) in library.into_entries().chain(self.globals) {
             match names.get(&name) {
-                Some(&i) => prelude[i as usize] = value,
+                Some(i) => prelude[i as usize] = value,
                 None => {
                     names.insert(name, prelude.len() as u32);
                     prelude.push(value);
                 }
             }
         }
+        names.set_builtin_put(if put_overridden {
+            None
+        } else {
+            names.get("put")
+        });
         let output = self.output.unwrap_or_else(|| Box::new(std::io::stdout()));
         let rng = match self.seed {
             Some(seed) => SmallRng::seed_from_u64(seed),

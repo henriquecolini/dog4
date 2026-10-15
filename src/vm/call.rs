@@ -44,10 +44,13 @@ impl Vm {
             }
             Body::Native(native) => {
                 let native = native.clone();
-                let mut args: Vec<Value> = self.stack.drain(args_at..).collect();
+                let mut args = self.arg_pool.pop().unwrap_or_default();
+                args.extend(self.stack.drain(args_at..));
                 self.stack.pop();
-                let result = native(self, &mut args)?;
-                self.stack.push(result);
+                let result = native(self, &mut args);
+                args.clear();
+                self.arg_pool.push(args);
+                self.stack.push(result?);
                 Ok(false)
             }
         }

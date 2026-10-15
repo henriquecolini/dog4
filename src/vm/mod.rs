@@ -28,8 +28,8 @@ use crate::limits::{Interrupt, Limits, Meter};
 use crate::module::{ModuleProvider, ModuleSource, ProviderError};
 use crate::syntax::{SourceMap, parse};
 use crate::value::{
-    Map, Type, Value, add_assign, coerce, compare, div, get_key, key_text, mul, neg, range, rem,
-    sub, update_path,
+    Map, Type, UpdateOp, Value, add_assign, coerce, compare, div, get_key, key_text, mul, neg,
+    range, rem, sub, update_path,
 };
 use iter::Iter;
 
@@ -96,6 +96,8 @@ pub struct Vm {
     pub(crate) rng: SmallRng,
     cells: Vec<Weak<RefCell<Value>>>,
     sweep_at: usize,
+    /// Spare argument buffers for native calls, so calls don't allocate.
+    pub(crate) arg_pool: Vec<Vec<Value>>,
     envs: Vec<Weak<ModuleEnv>>,
     placeholder: Cell,
 }
@@ -135,6 +137,7 @@ impl Vm {
             rng,
             cells: Vec::new(),
             sweep_at: 1024,
+            arg_pool: Vec::new(),
             envs: Vec::new(),
             placeholder: Rc::new(RefCell::new(Value::Null)),
         }
@@ -193,7 +196,7 @@ impl Vm {
         }
         self.prelude_names
             .get(name)
-            .map(|&i| self.prelude[i as usize].clone())
+            .map(|i| self.prelude[i as usize].clone())
     }
 
     /// Compiles and runs `code` inside the current module, so it can see (and
@@ -301,7 +304,10 @@ impl Vm {
         if self.stack.len() < needed {
             self.stack.resize(needed, Value::Null);
         }
-        let cells = vec![Binding::Cell(self.placeholder.clone()); func.proto.n_cells as usize];
+        let cells = match func.proto.n_cells {
+            0 => Vec::new(),
+            n => vec![Binding::Cell(self.placeholder.clone()); n as usize],
+        };
         self.frames.push(Frame {
             func,
             ip: 0,
@@ -552,6 +558,27 @@ impl Vm {
                 let b = self.pop();
                 let a = self.pop();
                 let r = t!($f(&a, &b));
+                a.discard();
+                b.discard();
+                self.stack.push(r);
+            }};
+        }
+        // Integer arithmetic in place on the top of the stack, falling back to
+        // the general operation for anything else (or on overflow).
+        macro_rules! arith {
+            ($checked:ident, $general:expr) => {{
+                let b = self.pop();
+                if let (Some(Value::Int(x)), Value::Int(y)) = (self.stack.last_mut(), &b) {
+                    if let Some(r) = x.$checked(*y) {
+                        *x = r;
+                        b.discard();
+                        continue;
+                    }
+                }
+                let a = self.pop();
+                let r = t!($general(&a, &b));
+                a.discard();
+                b.discard();
                 self.stack.push(r);
             }};
         }
@@ -559,8 +586,13 @@ impl Vm {
             ($test:expr) => {{
                 let b = self.pop();
                 let a = self.pop();
-                let ordering = t!(compare(&a, &b));
-                self.stack.push(Value::Bool(ordering.is_some_and($test)));
+                let result = match (&a, &b) {
+                    (Value::Int(x), Value::Int(y)) => $test(x.cmp(y)),
+                    _ => t!(compare(&a, &b)).is_some_and($test),
+                };
+                a.discard();
+                b.discard();
+                self.stack.push(Value::Bool(result));
             }};
         }
 
@@ -573,9 +605,7 @@ impl Vm {
                 Op::Null => self.stack.push(Value::Null),
                 Op::True => self.stack.push(Value::Bool(true)),
                 Op::False => self.stack.push(Value::Bool(false)),
-                Op::Pop => {
-                    self.stack.pop();
-                }
+                Op::Pop => self.pop().discard(),
 
                 Op::LoadLocal(s) => {
                     let v = self.stack[base + s as usize].clone();
@@ -583,7 +613,7 @@ impl Vm {
                 }
                 Op::StoreLocal(s) => {
                     let v = self.pop();
-                    self.stack[base + s as usize] = v;
+                    std::mem::replace(&mut self.stack[base + s as usize], v).discard();
                 }
                 Op::LoadCell(c) => {
                     let v = t!(self.frames[fi].cells[c as usize].read());
@@ -642,8 +672,26 @@ impl Vm {
                 Op::LoadPrelude(p) => self.stack.push(self.prelude[p as usize].clone()),
                 Op::Update { var, keys, op } => {
                     let value = self.pop();
-                    let start = self.stack.len() - keys as usize;
-                    let path: Vec<Value> = self.stack.drain(start..).collect();
+                    if keys == 0 && op == UpdateOp::Add {
+                        if let Var::Local(s) = var.get() {
+                            if let (Value::Int(x), Value::Int(y)) =
+                                (&mut self.stack[base + s as usize], &value)
+                            {
+                                if let Some(r) = x.checked_add(*y) {
+                                    *x = r;
+                                    value.discard();
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                    let path: Vec<Value> = match keys {
+                        0 => Vec::new(),
+                        n => {
+                            let start = self.stack.len() - n as usize;
+                            self.stack.drain(start..).collect()
+                        }
+                    };
                     let result = match var.get() {
                         Var::Local(s) => update_path(
                             &mut self.stack[base + s as usize],
@@ -705,13 +753,28 @@ impl Vm {
                 }
                 Op::Add => {
                     let b = self.pop();
-                    let mut a = self.pop();
-                    t!(add_assign(&mut a, b, &mut self.meter));
-                    self.stack.push(a);
+                    let Some(a) = self.stack.last_mut() else {
+                        fail!(Error::new(ErrorKind::Value, "internal error: empty stack"));
+                    };
+                    if let (Value::Int(x), Value::Int(y)) = (&mut *a, &b) {
+                        if let Some(r) = x.checked_add(*y) {
+                            *x = r;
+                            b.discard();
+                            continue;
+                        }
+                    }
+                    t!(add_assign(a, b, &mut self.meter));
                 }
-                Op::Sub => binary!(sub),
+                Op::Sub => arith!(checked_sub, sub),
                 Op::Mul => {
                     let b = self.pop();
+                    if let (Some(Value::Int(x)), Value::Int(y)) = (self.stack.last_mut(), &b) {
+                        if let Some(r) = x.checked_mul(*y) {
+                            *x = r;
+                            b.discard();
+                            continue;
+                        }
+                    }
                     let a = self.pop();
                     let r = t!(mul(&a, &b, &mut self.meter));
                     self.stack.push(r);
@@ -728,10 +791,10 @@ impl Vm {
                     let a = self.pop();
                     self.stack.push(Value::Bool(a != b));
                 }
-                Op::Lt => compare_op!(|o| o.is_lt()),
-                Op::Le => compare_op!(|o| o.is_le()),
-                Op::Gt => compare_op!(|o| o.is_gt()),
-                Op::Ge => compare_op!(|o| o.is_ge()),
+                Op::Lt => compare_op!(std::cmp::Ordering::is_lt),
+                Op::Le => compare_op!(std::cmp::Ordering::is_le),
+                Op::Gt => compare_op!(std::cmp::Ordering::is_gt),
+                Op::Ge => compare_op!(std::cmp::Ordering::is_ge),
                 Op::Range => {
                     let b = self.pop();
                     let a = self.pop();
@@ -795,7 +858,10 @@ impl Vm {
                     ip = jump(ip, o);
                 }
                 Op::JumpIfFalse(o) => {
-                    if !self.pop().truthy() {
+                    let v = self.pop();
+                    let truthy = v.truthy();
+                    v.discard();
+                    if !truthy {
                         ip = jump(ip, o);
                     }
                 }
@@ -871,8 +937,14 @@ impl Vm {
                 Op::AccBegin => self.accs.push(Value::Null),
                 Op::AccPut => {
                     let v = self.pop();
-                    if let Some(acc) = self.accs.last_mut() {
-                        t!(add_assign(acc, v, &mut self.meter));
+                    if v.is_null() {
+                        v.discard();
+                    } else if let Some(acc) = self.accs.last_mut() {
+                        if acc.is_null() {
+                            std::mem::replace(acc, v).discard();
+                        } else {
+                            t!(add_assign(acc, v, &mut self.meter));
+                        }
                     }
                 }
                 Op::AccEnd => {
@@ -932,6 +1004,12 @@ impl Vm {
                     let sep = if split { Some(self.pop()) } else { None };
                     let v = self.pop();
                     let it = t!(Iter::new(v, sep, &mut self.meter));
+                    self.iters.push(it);
+                }
+                Op::IterRange => {
+                    let hi = self.pop();
+                    let lo = self.pop();
+                    let it = t!(Iter::range(&lo, &hi));
                     self.iters.push(it);
                 }
                 Op::IterNext { pairs, exit } => {

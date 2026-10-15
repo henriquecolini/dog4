@@ -54,13 +54,19 @@ fn captured_locals_are_boxed() {
 #[test]
 fn captured_parameters_are_boxed_on_entry() {
     let listing = disasm("fn adder (n) { put fn (x) { put ($x + $n) } }");
-    assert!(listing.contains("BoxParam { slot: 0, cell: 0 }"), "{listing}");
+    assert!(
+        listing.contains("BoxParam { slot: 0, cell: 0 }"),
+        "{listing}"
+    );
 }
 
 #[test]
 fn reference_parameters_bind_cells() {
     let listing = disasm("fn incr (n: &num) { n += 1 }");
-    assert!(listing.contains("BindRef { slot: 0, cell: 0 }"), "{listing}");
+    assert!(
+        listing.contains("BindRef { slot: 0, cell: 0 }"),
+        "{listing}"
+    );
     assert!(listing.contains("Update { var: Cell(0)"), "{listing}");
 }
 
@@ -68,7 +74,10 @@ fn reference_parameters_bind_cells() {
 fn taking_a_reference_boxes_the_local() {
     let listing = disasm("fn f () { x = 1; g &x; put $x } fn g (r: &) {}");
     assert!(listing.contains("DeclCell(0)"), "{listing}");
-    assert!(listing.contains("MakeRef { var: Cell(0), keys: 0 }"), "{listing}");
+    assert!(
+        listing.contains("MakeRef { var: Cell(0), keys: 0 }"),
+        "{listing}"
+    );
     assert!(listing.contains("LoadCell(0)"), "{listing}");
 }
 
@@ -87,10 +96,24 @@ fn overloads_are_grouped() {
 
 #[test]
 fn shadowed_prelude_names_resolve_to_globals() {
-    let listing = disasm("fn len (x) { put 1 } len a");
-    // Only `put` (inside the function) comes from the prelude; `len` is the global.
+    let listing = disasm("fn len (x) { pln 1 } len a");
+    // Only `pln` (inside the function) comes from the prelude; `len` is the global.
     assert_eq!(listing.matches("LoadPrelude").count(), 1, "{listing}");
     assert!(listing.contains("LoadGlobal(0)"), "{listing}");
+}
+
+#[test]
+fn builtin_put_of_one_value_is_inlined() {
+    let listing = disasm("put 1; put; put a b");
+    // `put 1` is just `1`, `put` is `null`; only the two-argument form calls.
+    assert_eq!(listing.matches("Call(").count(), 1, "{listing}");
+    assert!(listing.contains("Null"), "{listing}");
+}
+
+#[test]
+fn shadowed_put_is_not_inlined() {
+    let listing = disasm("fn put (x) { pln $x } put 1");
+    assert!(listing.contains("Call(1)"), "{listing}");
 }
 
 #[test]
@@ -107,7 +130,11 @@ fn static_name_errors() {
     let e = compile_error("nope 1");
     assert!(e.message().contains("unknown command `nope`"));
     let e = compile_error("x += 1; fn f () { y += 1 }");
-    assert!(e.message().contains("`y` is not defined"), "{}", e.message());
+    assert!(
+        e.message().contains("`y` is not defined"),
+        "{}",
+        e.message()
+    );
 }
 
 #[test]

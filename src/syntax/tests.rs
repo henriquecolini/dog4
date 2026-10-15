@@ -43,7 +43,8 @@ fn sexp_stmt(stmt: &Stmt) -> String {
 }
 
 fn opt(v: &Option<Expr>) -> String {
-    v.as_ref().map_or(String::new(), |v| format!(" {}", sexp(v)))
+    v.as_ref()
+        .map_or(String::new(), |v| format!(" {}", sexp(v)))
 }
 
 fn sexp_place(place: &Place) -> String {
@@ -220,8 +221,14 @@ fn quoting_and_escapes() {
 
 #[test]
 fn interpolation() {
-    assert_eq!(p(r#"put "hi $name!""#), r#"(call $put (interp "hi " $name "!"))"#);
-    assert_eq!(p(r#"put "$u.name $l[0]""#), r#"(call $put (interp $u.name " " $l[0]))"#);
+    assert_eq!(
+        p(r#"put "hi $name!""#),
+        r#"(call $put (interp "hi " $name "!"))"#
+    );
+    assert_eq!(
+        p(r#"put "$u.name $l[0]""#),
+        r#"(call $put (interp $u.name " " $l[0]))"#
+    );
     assert_eq!(p(r#"put "${n}.txt""#), r#"(call $put (interp $n ".txt"))"#);
     assert_eq!(p(r#"put "$(1 + 2)""#), r#"(call $put (interp (+ 1 2)))"#);
     assert_eq!(p(r#"put "$f(1)""#), r#"(call $put (interp $f "(1)"))"#);
@@ -306,7 +313,10 @@ fn commands_in_expressions() {
     assert_eq!(p("x = (abs -3)"), "(= x (call $abs -3))");
     assert_eq!(p("x = (a - 3)"), r#"(= x (- "a" 3))"#);
     assert_eq!(p("x = ($f a b)"), r#"(= x (call $f "a" "b"))"#);
-    assert_eq!(p("x = max(len $l, 2)"), "(= x (call $max (call $len $l) 2))");
+    assert_eq!(
+        p("x = max(len $l, 2)"),
+        "(= x (call $max (call $len $l) 2))"
+    );
     assert_eq!(
         p("x = upper hello world"),
         r#"(= x (call $upper "hello" "world"))"#
@@ -337,7 +347,10 @@ fn assignments() {
 
 #[test]
 fn control_flow() {
-    assert_eq!(p("if $c { put a }"), r#"(discard (if $c {(call $put "a")}))"#);
+    assert_eq!(
+        p("if $c { put a }"),
+        r#"(discard (if $c {(call $put "a")}))"#
+    );
     assert_eq!(
         p("if $c a else if $d b else c"),
         r#"(discard (if $c "a" (if $d "b" "c")))"#
@@ -416,8 +429,14 @@ fn modules() {
 
 #[test]
 fn statement_separators() {
-    assert_eq!(p("if $a {} pln x"), r#"(discard (if $a {})) (call $pln "x")"#);
-    assert_eq!(p("{ a } { b }"), "(discard {(call $a)}) (discard {(call $b)})");
+    assert_eq!(
+        p("if $a {} pln x"),
+        r#"(discard (if $a {})) (call $pln "x")"#
+    );
+    assert_eq!(
+        p("{ a } { b }"),
+        "(discard {(call $a)}) (discard {(call $b)})"
+    );
     assert_eq!(p("fn f () {} f"), "(fn f () {}) (call $f)");
     assert!(err("x = 1 y = 2").contains("expected `;`"));
     assert!(err("pln a }").contains("unexpected `}`"));
@@ -426,9 +445,15 @@ fn statement_separators() {
 
 #[test]
 fn comments() {
-    assert_eq!(p("pln a; // comment\npln b"), r#"(call $pln "a") (call $pln "b")"#);
+    assert_eq!(
+        p("pln a; // comment\npln b"),
+        r#"(call $pln "a") (call $pln "b")"#
+    );
     assert_eq!(p("pln a // comment\nb"), r#"(call $pln "a" "b")"#);
-    assert_eq!(p("pln a /* x /* nested */ y */ b"), r#"(call $pln "a" "b")"#);
+    assert_eq!(
+        p("pln a /* x /* nested */ y */ b"),
+        r#"(call $pln "a" "b")"#
+    );
     assert_eq!(p("pln a//b"), r#"(call $pln "a//b")"#);
     assert_eq!(
         p(r#"pln "//not a comment""#),
@@ -439,7 +464,10 @@ fn comments() {
 
 #[test]
 fn unicode() {
-    assert_eq!(p("cão = 1; pln $cão é"), r#"(= cão 1) (call $pln $cão "é")"#);
+    assert_eq!(
+        p("cão = 1; pln $cão é"),
+        r#"(= cão 1) (call $pln $cão "é")"#
+    );
     assert_eq!(p(r#"pln "$unit²""#), r#"(call $pln (interp $unit "²"))"#);
 }
 

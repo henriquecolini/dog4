@@ -10,6 +10,8 @@ pub enum Iter {
     Items { items: Array, next: usize },
     /// Map entries (key, value).
     Entries { map: Object, next: usize },
+    /// `for i in (a..b)`, counted without building an array.
+    Range { next: i64, end: i64, index: i64 },
 }
 
 impl Iter {
@@ -52,6 +54,22 @@ impl Iter {
         Ok(Iter::Items { items, next: 0 })
     }
 
+    /// Counts from `lo` up to (excluding) `hi`.
+    pub fn range(lo: &Value, hi: &Value) -> Result<Iter> {
+        match (lo, hi) {
+            (Value::Int(lo), Value::Int(hi)) => Ok(Iter::Range {
+                next: *lo,
+                end: *hi,
+                index: 0,
+            }),
+            _ => Err(Error::type_error(format!(
+                "a range needs two whole numbers, not {} and {}",
+                lo.describe(),
+                hi.describe()
+            ))),
+        }
+    }
+
     /// The next element: `(element, None)`, or `(key, Some(element))` for pairs.
     pub fn next(&mut self, pairs: bool) -> Option<(Value, Option<Value>)> {
         match self {
@@ -63,6 +81,20 @@ impl Iter {
                     (index, Some(item))
                 } else {
                     (item, None)
+                })
+            }
+            Iter::Range { next, end, index } => {
+                if *next >= *end {
+                    return None;
+                }
+                let value = Value::Int(*next);
+                let i = Value::Int(*index);
+                *next += 1;
+                *index += 1;
+                Some(if pairs {
+                    (i, Some(value))
+                } else {
+                    (value, None)
                 })
             }
             Iter::Entries { map, next } => {

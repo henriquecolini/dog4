@@ -244,6 +244,18 @@ impl Value {
         matches!(self, Value::Null)
     }
 
+    /// Drops a value without calling the (out-of-line) drop glue when there is
+    /// nothing to free. The VM's hot paths discard many numbers and bools.
+    #[inline(always)]
+    pub fn discard(self) {
+        match self {
+            Value::Null | Value::Bool(_) | Value::Int(_) | Value::Float(_) => {
+                std::mem::forget(self)
+            }
+            heap => drop(heap),
+        }
+    }
+
     fn is_container(&self) -> bool {
         matches!(self, Value::Arr(_) | Value::Map(_))
     }

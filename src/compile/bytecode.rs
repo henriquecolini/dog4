@@ -220,6 +220,8 @@ pub enum Op {
         /// Whether a `split` separator is on the stack.
         split: bool,
     },
+    /// Pops two whole numbers and starts counting from the first up to the second.
+    IterRange,
     /// Pushes the next element (`pairs`: key and element), or jumps when done.
     IterNext {
         /// Whether the loop binds two variables.
