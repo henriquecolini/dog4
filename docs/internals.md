@@ -157,4 +157,6 @@ library: the module exports `dog4_alloc`, `dog4_free`, `dog4_run` and
 the host — there is no clock there, so the playground bounds scripts by fuel,
 and its random seed comes from JavaScript. `web/worker.js` runs the module off
 the main thread; `web/app.js` is the editor (a transparent textarea over
-highlighted text). `deploy.sh` publishes `web/` to the `gh-pages` branch.
+highlighted text). On every push to `main`,
+`.github/workflows/playground.yml` builds `web/`, runs `test.mjs` and
+publishes it to GitHub Pages.
