@@ -28,7 +28,7 @@ fn timeout(vm: &mut Vm, value: Option<&Value>) -> Result<u64> {
     vm.meter().check_now()?;
     let secs = match value {
         None | Some(Value::Null) => DEFAULT_TIMEOUT,
-        Some(v @ (Value::Int(_) | Value::Float(_))) => num(v).clamp(1.0, 60.0) as u64,
+        Some(v @ (Value::Int(_) | Value::Float(_))) => num(v).max(1.0) as u64,
         Some(other) => {
             return Err(Error::type_error(format!(
                 "the `timeout` option is a number of seconds, not {}",
