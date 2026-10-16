@@ -1,1 +1,1 @@
-use "lib/broken";
+x = mod lib/broken;

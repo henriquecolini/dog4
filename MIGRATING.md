@@ -78,5 +78,5 @@ separate arguments.
 Expressions in `( … )` and after `=`, typed and overloaded functions, lambdas
 and closures, value bodies (`fn f (x) ($x * 2)`), references (`&x`), `let`,
 `try`/`catch`/`throw`, `break`/`continue`, map and array literals, modules
-(`use`, `mod`, `pub`), and a sandbox for running untrusted code. See the [README](README.md) and the
+(`mod`, `use`, `pub`), and a sandbox for running untrusted code. See the [README](README.md) and the
 [language reference](docs/language.md).

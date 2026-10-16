@@ -1,2 +1,2 @@
-use "../util";
-pub fn quadruple (x: num) { put (util.double(util.double($x))) }
+use mod ../util;
+pub fn quadruple (x: num) { put (double(double($x))) }

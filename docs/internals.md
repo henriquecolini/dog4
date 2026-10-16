@@ -44,11 +44,19 @@ Every node carries a byte `Span`; nesting depth is bounded by
 module's output. Each function (and lambda) becomes a nested `Proto`.
 
 **Names.** A pre-pass collects the module's top-level names (assignments,
-`let`, `fn`, `mod`, `use`) into its `ModuleScope`, so functions can refer to
+`let`, `fn`, `use … from`) into its `ModuleScope`, so functions can refer to
 globals defined later. Inside, a name resolves to, in order: a local slot of
 the current function, an upvalue (a local of an enclosing function), a module
 global, or a prelude entry. Assignment follows dog3's rule — the nearest
 visible variable, otherwise a new local in the current block.
+
+**Glob imports.** `use map` stores the map in a hidden variable named
+`*source:offset` (a module global at the top level, otherwise a slot declared
+at the start of its block so hoisted functions can capture it). A name with
+globs between its use and its declaration compiles to `LoadImported(i)`, whose
+`Proto::lookups[i]` lists those hidden variables in the order to check them and
+the static fallback (a variable, a prelude entry, or "not defined"). Code with
+no glob in scope compiles exactly as before.
 
 **Slots and cells.** Every declaration gets its own slot. When a closure
 captures a local, or `&x` is taken, the local is *boxed* into a cell. That is
@@ -100,11 +108,12 @@ and pushing the error map) or unwinds to `stop` and returns it with a trace.
 module global. They travel only as call arguments (`Value::Ref`) and are bound
 to cells by `BindRef`/`DeclRef`, so scripts never hold one as a value.
 
-**Modules.** `use` asks native modules, then the cache, then the provider.
+**Modules.** `mod name` (`LoadModule`) asks native modules, then the cache, then the provider.
 Scripts run in a frame of kind `Module`; when it returns, its `ModuleEnv`'s
 `pub` globals (flagged in its `ModuleScope`) become the map, which is cached.
-A loading stack detects cycles. Inline `mod` blocks are compiled separately and
-run the same way (uncached).
+`pub use` globs are merged in after the `pub` names. A loading stack detects
+cycles. `mod { … }` literals are compiled separately and run the same way
+(uncached).
 
 ## Values and memory
 

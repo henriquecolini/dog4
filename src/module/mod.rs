@@ -1,4 +1,4 @@
-//! Module providers: how `use "name"` finds a module.
+//! Module providers: how `mod name` finds a module.
 //!
 //! The runtime doesn't know about files. It asks a [`ModuleProvider`] to turn a
 //! name into a canonical id, then to load that id. Ids are used for caching (a
@@ -41,7 +41,7 @@ impl fmt::Display for ProviderError {
 /// Implement this to load modules from anywhere: a database, an HTTP service,
 /// a virtual filesystem. Built in: [`FsProvider`], [`MemoryProvider`], [`ChainProvider`].
 pub trait ModuleProvider {
-    /// Turns the name written in `use` into a canonical id. `from` is the id of
+    /// Turns the name written after `mod` into a canonical id. `from` is the id of
     /// the importing module (`None` for code run directly by the host).
     ///
     /// The default treats `./x` and `../x` as relative to `from` and everything

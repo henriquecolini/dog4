@@ -1,0 +1,12 @@
+// `mod name` and `mod { … }` are expressions: they give the module's map and bind nothing.
+u = mod lib/util;
+pln { u.double 4 } ((mod lib/util).double(5)) { keys (mod lib/util) };
+name = "lib/util";
+dynamic = mod $name;
+pln ($dynamic.double(6)) ($dynamic == $u);
+lit = mod { pub fn greet (name) { put "Hello $name" } };
+pln { lit.greet Bob } { keys (mod { pub x = 1 }) };
+// On its own, a `mod` runs the module (once) and discards its map.
+mod lib/greet;
+mod { pln "inline output is discarded too" }
+pln ok;

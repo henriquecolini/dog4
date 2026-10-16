@@ -302,20 +302,19 @@ impl<'a> Parser<'a> {
         })
     }
 
-    /// `pub` followed by a declaration: `fn`, `mod`, `use`, `let` or `name = value`.
+    /// `pub` followed by a declaration: `fn`, `use`, `let` or `name = value`.
     fn pub_stmt(&mut self) -> Result<Stmt> {
         let start = self.pos;
         let keyword_span = Span::new(start, start + 3);
         self.pos += 3;
         self.skip_trivia()?;
-        const MISPLACED: &str =
-            "`pub` must be followed by `fn`, `mod`, `use`, `let` or `name = value`";
+        const MISPLACED: &str = "`pub` must be followed by `fn`, `use`, `let` or `name = value`";
         if self.at_stmt_end() || self.peek_ident() == Some("pub") {
             return Err(self.error_at(MISPLACED, keyword_span));
         }
         let mut stmt = self.stmt()?;
         let declares = match &stmt.kind {
-            StmtKind::Fn(_) | StmtKind::Mod { .. } | StmtKind::Use { .. } => true,
+            StmtKind::Fn(_) | StmtKind::Use { .. } => true,
             StmtKind::Let { value, .. } => matches!(value, LetValue::Value(_)),
             StmtKind::Assign { target, op, .. } => *op == UpdateOp::Set && target.path.is_empty(),
             _ => false,
@@ -344,39 +343,43 @@ impl<'a> Parser<'a> {
                 Ok(StmtKind::Fn(self.fn_decl()?))
             }
             "mod" => {
-                self.pos += 3;
-                self.skip_trivia()?;
-                let name = self.expect_ident("a module name")?;
-                self.skip_trivia()?;
-                if self.peek() != Some('{') {
-                    return Err(self.error("expected `{` to start the module body"));
+                let expr = self.mod_expr(WordMode::Command)?;
+                if let ExprKind::Mod(name) = &expr.kind {
+                    if let ExprKind::Lit(Value::Str(name)) = &name.kind {
+                        let save = self.pos;
+                        self.skip_trivia()?;
+                        if self.peek() == Some('{') {
+                            return Err(self.error_at(
+                                format!("modules are values now: write `{name} = mod {{ … }};`"),
+                                expr.span,
+                            ));
+                        }
+                        self.pos = save;
+                    }
                 }
-                let body = self.block()?;
-                Ok(StmtKind::Mod {
-                    name,
-                    body: Rc::new(body),
-                })
+                Ok(StmtKind::Discard(expr))
             }
             "use" => {
                 self.pos += 3;
                 self.skip_trivia()?;
-                let path = self.value(WordMode::Command)?;
-                let save = self.pos;
-                self.skip_trivia()?;
-                let alias = if self.at_keyword("as") {
-                    self.pos += 2;
-                    self.skip_trivia()?;
-                    self.expect_ident("a name after `as`")?
+                let items = if self.named_use_follows()? {
+                    Some(self.use_items()?)
                 } else {
-                    self.pos = save;
-                    default_alias(&path).ok_or_else(|| {
-                        self.error_at(
-                            "can't pick a name for this module; add `as name`",
-                            path.span,
-                        )
-                    })?
+                    None
                 };
-                Ok(StmtKind::Use { path, alias })
+                let source = self.value(WordMode::Command)?;
+                if items.is_none() {
+                    if let ExprKind::Lit(Value::Str(name)) = &source.kind {
+                        return Err(self.error_at(
+                            format!(
+                                "`use` imports the members of a map; load the module with \
+                                 `use mod {name};`, or bind it with `x = mod {name};`"
+                            ),
+                            source.span,
+                        ));
+                    }
+                }
+                Ok(StmtKind::Use { source, items })
             }
             "let" => {
                 self.pos += 3;
@@ -427,6 +430,69 @@ impl<'a> Parser<'a> {
                 if word == "else" { "if" } else { "try" }
             ))),
         }
+    }
+
+    /// Whether `use` is followed by a list of names (`use a, b as c from …`)
+    /// rather than a map to glob-import.
+    fn named_use_follows(&mut self) -> Result<bool> {
+        let save = self.pos;
+        let named = if self.ident().is_some() {
+            self.skip_trivia()?;
+            self.peek() == Some(',') || self.at_keyword("as") || self.at_keyword("from")
+        } else {
+            false
+        };
+        self.pos = save;
+        Ok(named)
+    }
+
+    /// `a, b as c from`: the names of a `use`, up to and including `from`.
+    fn use_items(&mut self) -> Result<Vec<UseItem>> {
+        let mut items = Vec::new();
+        loop {
+            let name = self.expect_ident("a name to import")?;
+            self.skip_trivia()?;
+            let alias = if self.at_keyword("as") {
+                self.pos += 2;
+                self.skip_trivia()?;
+                let alias = self.expect_ident("a name after `as`")?;
+                self.skip_trivia()?;
+                alias
+            } else {
+                name.clone()
+            };
+            items.push(UseItem { name, alias });
+            if self.eat(',') {
+                self.skip_trivia()?;
+                continue;
+            }
+            if self.at_keyword("from") {
+                self.pos += 4;
+                self.skip_trivia()?;
+                return Ok(items);
+            }
+            return Err(self.error("expected `,` or `from` after the imported name"));
+        }
+    }
+
+    /// `mod name` (loads a module) or `mod { … }` (a module literal), with the
+    /// cursor on `mod`.
+    pub(super) fn mod_expr(&mut self, mode: WordMode) -> Result<Expr> {
+        let start = self.pos;
+        self.pos += 3;
+        self.skip_trivia()?;
+        if self.peek() == Some('{') {
+            let body = self.block()?;
+            return Ok(Expr::new(
+                ExprKind::ModLit(Rc::new(body)),
+                self.span_from(start),
+            ));
+        }
+        let name = self.value(mode)?;
+        Ok(Expr::new(
+            ExprKind::Mod(Box::new(name)),
+            self.span_from(start),
+        ))
     }
 
     /// A statement starting with an identifier: an assignment or a command.
@@ -741,6 +807,9 @@ impl<'a> Parser<'a> {
                 }
                 if self.at_form_keyword("fn") {
                     return self.lambda_expr(mode);
+                }
+                if self.at_form_keyword("mod") {
+                    return self.mod_expr(mode);
                 }
                 return self.word(mode);
             }
@@ -1234,28 +1303,9 @@ pub(super) fn place_to_expr(place: Place) -> Expr {
 
 /// Statements that must be followed by `;` (or end their block).
 fn needs_separator(stmt: &Stmt) -> bool {
-    !matches!(
-        stmt.kind,
-        StmtKind::Discard(_) | StmtKind::Fn(_) | StmtKind::Mod { .. }
-    )
-}
-
-/// `use "net/http"` binds `http`; `use "my-lib.dog"` binds `my_lib`.
-fn default_alias(path: &Expr) -> Option<Ident> {
-    let ExprKind::Lit(Value::Str(text)) = &path.kind else {
-        return None;
-    };
-    let last = text.rsplit('/').next()?;
-    let last = last.strip_suffix(".dog").unwrap_or(last);
-    if last.is_empty() || last == "." || last == ".." {
-        return None;
+    match &stmt.kind {
+        StmtKind::Discard(expr) => matches!(expr.kind, ExprKind::Mod(_)),
+        StmtKind::Fn(_) => false,
+        _ => true,
     }
-    let mut name: String = last
-        .chars()
-        .map(|c| if is_ident_char(c) { c } else { '_' })
-        .collect();
-    if !name.starts_with(is_ident_start) {
-        name.insert(0, '_');
-    }
-    Some(name.into())
 }

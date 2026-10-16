@@ -1,2 +1,2 @@
 secret = 42;
-mod m { leak = $secret }
+m = mod { leak = $secret };

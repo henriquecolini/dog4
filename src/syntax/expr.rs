@@ -193,14 +193,11 @@ impl Parser<'_> {
         if self.at_form_keyword("fn") {
             return self.lambda_expr(WordMode::Command);
         }
+        if self.at_form_keyword("mod") {
+            return self.mod_expr(WordMode::Command);
+        }
         if self.at_form_keyword("use") {
-            self.pos += 3;
-            self.skip_trivia()?;
-            let name = self.value(WordMode::Command)?;
-            return Ok(Expr::new(
-                ExprKind::Use(Box::new(name)),
-                self.span_from(start),
-            ));
+            return Err(self.error("`use` is a statement; to load a module here write `mod name`"));
         }
         for (word, value) in [
             ("true", Value::Bool(true)),

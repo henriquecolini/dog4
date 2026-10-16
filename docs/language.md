@@ -19,8 +19,8 @@ one that outputs nothing, is `null`. The statement kinds:
 | statement | outputs |
 |---|---|
 | `name arg arg …` (a command) | the command's result |
-| `x = expr`, `x += expr`, `let x = expr`, `fn …`, `mod …`, `use …` | nothing |
-| a bare block `{ … }`, `if`, `while`, `for`, `try` | nothing — their value is **discarded** |
+| `x = expr`, `x += expr`, `let x = expr`, `fn …`, `use …` | nothing |
+| a bare block `{ … }`, `if`, `while`, `for`, `try`, `mod` | nothing — their value is **discarded** |
 | `return [expr]` | ends the function; its value replaces everything output so far |
 | `clear [expr]` | replaces what the current block has output so far |
 | `break [expr]` / `continue` | see §7 |
@@ -174,7 +174,7 @@ and in call arguments `f(…)`, dog4 reads **expressions**:
   * it is followed, on the same line, by an argument: a command,
     `(len $list)`, `x = upper hello` (the arguments run to the end of the
     expression; a `-` directly followed by text, as in `abs -3`, is an argument);
-* `fn (…) { … }` lambdas, `if`/`while`/`for`/`try` forms, `use name`.
+* `fn (…) { … }` lambdas, `if`/`while`/`for`/`try` forms, `mod name`, `mod { … }`.
 
 Operators, from loosest to tightest:
 
@@ -333,34 +333,65 @@ pln $data
 
 ## 10. Modules
 
-* `use "name"` loads a module and binds it to the last segment of the name
-  (`use "net/http"` → `http`, `use "my-lib"` → `my_lib`); `use "name" as x`
-  picks the variable. `(use $expr)` is an expression giving the module.
-* Names are resolved by the host's module provider; `./x` and `../x` are
-  relative to the importing module.
-* A module is the **map of its `pub` top-level names** after it has run. Its
-  top-level output is discarded.
-* `pub` goes before a top-level `fn`, `mod`, `use`, `let` or `name = value`.
-  A name is exported if any of its top-level declarations is `pub` (so one `pub
-  fn` exports the whole overload set). The module's own code sees every name,
-  `pub` or not. `pub` anywhere but a module's top level is an error.
-* Each module runs once per runtime; later `use`s get the same map. Module
-  functions see their module's variables live; the map itself is a snapshot.
+A module is a **map**: the `pub` top-level names of some code, after it has run.
+
+* `mod name` loads a module and gives its map. The name is a command-mode value
+  (`mod net/http`, `mod "my lib"`, `mod $name`), resolved by the host's module
+  provider; `./x` and `../x` are relative to the importing module.
+* `mod { … }` is a module literal. It compiles exactly like a file: it has its
+  own variables and can't see the enclosing code's.
+* Both are expressions and bind nothing: `x = mod foo`, `put mod foo`,
+  `(mod foo).hi`. On its own, a `mod` statement runs the module and discards the
+  map, like a bare block.
+* A module's top-level output is discarded. Each module runs once per runtime;
+  later `mod`s of the same name get the same map. Module functions see their
+  module's variables live; the map itself is a snapshot.
+* `pub` goes before a top-level `fn`, `use`, `let` or `name = value`. A name is
+  exported if any of its top-level declarations is `pub` (so one `pub fn`
+  exports the whole overload set). The module's own code sees every name, `pub`
+  or not. `pub` anywhere but a module's top level is an error.
 * Circular imports are an error.
-* `mod name { … }` defines a module inline. It compiles exactly like a file:
-  it has its own variables and can't see the enclosing file's.
 
 ```dog
-mod counter {
+counter = mod {
     pub n = 0;
     step = 1;
     pub fn next () { n += $step; put $n }
-}
-use "shapes/area" as area;
+};
+area = mod shapes/area;
 pln { counter.next } { counter.next } { keys $counter } { keys $area }
 ```
 ```text
 1 2 [n next] [square]
+```
+
+`use` brings the members of any map into scope:
+
+* `use a, b as c from map` declares the variables `a` and `c`, like `let`,
+  with the values of `map.a` and `map.b`. A missing member is an error.
+* `use map` is a **glob import**: every member of the map becomes visible by
+  name in the enclosing block (at the top level, in the whole module). Its
+  members can't be assigned to; `x = …` declares or assigns a real variable,
+  which wins over the glob.
+* A name is looked up scope by scope from the innermost: a variable declared
+  in the scope wins, then the scope's globs, newest first, then the enclosing
+  scopes, module globals, the module's globs, and the builtins. So globs can
+  shadow builtins and outer variables. Globs are checked when the code runs: with
+  a glob in scope, an unknown name is an error only when it is reached.
+* `pub use` re-exports: the named members, or every member of the glob (a
+  module's own `pub` names win over globbed ones).
+
+```dog
+use hi from mod greet;
+hi Ana;
+use mod shapes/area;
+pln { square 3 };
+pln { use [len = fn (x) { put "len of $x" }]; len abc } { len abc };
+```
+```text
+Hello Ana
+9
+len of abc 1
 ```
 
 ## 11. Errors

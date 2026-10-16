@@ -1,0 +1,5 @@
+error: there is no `triple` to import
+ --> use_named_missing:1:1
+  |
+1 | use double, triple from mod lib/util;
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

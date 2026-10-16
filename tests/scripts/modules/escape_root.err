@@ -1,5 +1,5 @@
 error: can't load module `../../secrets`: `../../secrets` points outside the module root
- --> escape_root:1:1
+ --> escape_root:1:5
   |
-1 | use "../../secrets";
-  | ^^^^^^^^^^^^^^^^^^^
+1 | x = mod ../../secrets;
+  |     ^^^^^^^^^^^^^^^^^

@@ -289,23 +289,28 @@ oops: `risky` expects a num for `x`, got str "abc"
 
 ## Modules
 
-A module is a file, and a file is a map of the top-level names it marks
-`pub`. Modules are found by the host program, so they can live on disk, in
-memory, or in a database:
+A module is a map of the top-level names some code marks `pub`. `mod name`
+loads one; the host program finds it, so modules can live on disk, in memory,
+or in a database. `mod { … }` is a module literal, and `use` brings a map's
+members into scope:
 
 ```dog
-use "greet";
+greet = mod greet;
 greet.hi Bob;
 pln { keys $greet };
-mod shapes {
+shapes = mod {
     pub fn square (side: num) { put ($side * $side) }
-}
-pln { shapes.square 4 }
+};
+pln { shapes.square 4 };
+use square from $shapes;
+use mod greet;
+hi { square 5 }
 ```
 ```text
 Hello Bob
 [hi loaded]
 16
+Hello 25
 ```
 
 ## Builtins
@@ -344,7 +349,7 @@ let mut runtime = Builder::sandboxed()
     .module("bot", bot.into_value())
     .build();
 
-runtime.run("message", r#"use "bot"; use "util"; bot.reply { util.shout hi }"#).unwrap();
+runtime.run("message", r#"bot = mod bot; use mod util; bot.reply { shout hi }"#).unwrap();
 ```
 
 See [docs/embedding.md](docs/embedding.md) for module providers, native

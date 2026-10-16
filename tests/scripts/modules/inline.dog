@@ -1,11 +1,11 @@
-mod geo {
+geo = mod {
     pub pi = 3.14;
     hidden = no;
     pub fn circle (r: num) { put ($pi * $r * $r) }
-}
+};
 pln { geo.circle 2 } $geo.pi { keys $geo };
-mod outer {
-    pub mod inner { pub x = deep }
+outer = mod {
+    pub inner = mod { pub x = deep };
     pub y = $inner.x;
-}
+};
 pln $outer.y $outer.inner.x;

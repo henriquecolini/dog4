@@ -23,7 +23,7 @@ fn tight_limits() -> Limits {
 fn run(source: &str) {
     let modules = MemoryProvider::new()
         .with("m", "pub x = 1; pub fn f (a) { put $a }")
-        .with("loop", "use \"loop\"");
+        .with("loop", "use mod loop");
     let mut rt = Builder::new()
         .limits(tight_limits())
         .output(OutputBuffer::default())
@@ -114,6 +114,8 @@ const TOKENS: &[&str] = &[
     "mod",
     "m",
     "as",
+    "from",
+    "loop",
     "%r",
     "a:",
     "num",
@@ -226,14 +228,14 @@ fn known_tricky_programs() {
         "x = []; x[-1] = 1",
         "for x in (0..5) { for y in (0..5) { if ($y == 2) { break }; continue } }",
         "try { try { throw a } catch e { throw $e } } catch e { put $e }",
-        "use \"loop\"",
+        "use mod loop",
         "eval \"eval \\\"eval 1\\\"\"",
         "fn f (n: num) { put { f ($n + 1) } } f 0",
         "x = [1]; fn g (a: &) { a += $a } g &x; g &x",
         "map [1 2] fn (x) { break }",
         "x = \"a\" * 1000000",
         "x = (0..1000000)",
-        "mod m { mod n { mod o { use \"m\" } } }",
+        "m = mod { n = mod { o = mod { use mod m } } }",
         "throw (fn () {})",
         "put $%x",
         "f = fn () { put $f }; pln ($f())",

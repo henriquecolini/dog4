@@ -20,7 +20,7 @@ fn write_proto(proto: &Proto, out: &mut String, indent: &str) {
     for (i, op) in proto.code.iter().enumerate() {
         let _ = write!(out, "{indent}  {i:4}  ");
         match *op {
-            Op::Const(c) | Op::GetField(c) => {
+            Op::Const(c) | Op::GetField(c) | Op::Import(c) => {
                 let _ = write!(out, "{op:?}  ; {}", proto.consts[c as usize].quoted_repr());
             }
             Op::Jump(o)
@@ -33,6 +33,15 @@ fn write_proto(proto: &Proto, out: &mut String, indent: &str) {
             | Op::PushHandler(o)
             | Op::IterNext { exit: o, .. } => {
                 let _ = write!(out, "{op:?}  ; -> {}", i as i64 + 1 + o as i64);
+            }
+            Op::LoadImported(l) => {
+                let lookup = &proto.lookups[l as usize];
+                let sources: Vec<_> = lookup.sources.iter().map(|v| v.get()).collect();
+                let _ = write!(
+                    out,
+                    "{op:?}  ; {:?} in {sources:?} else {:?}",
+                    lookup.key, lookup.fallback
+                );
             }
             _ => {
                 let _ = write!(out, "{op:?}");

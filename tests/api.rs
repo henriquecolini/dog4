@@ -78,7 +78,7 @@ fn native_modules_with_host_state() {
         .build();
     run(
         &mut rt,
-        r#"use "telegram"; telegram.send 42 hello there; telegram.send "7" bye"#,
+        r#"telegram = mod telegram; telegram.send 42 hello there; telegram.send "7" bye"#,
     );
     assert_eq!(*sent.borrow(), ["42: hello there", "7: bye"]);
 }
@@ -124,13 +124,13 @@ fn modules_are_cached_across_runs() {
     let provider =
         MemoryProvider::new().with("counter", "n = 0; pub fn next () { n += 1; put $n }");
     let mut rt = Runtime::builder().provider(provider).build();
-    assert_eq!(run(&mut rt, r#"use "counter"; counter.next"#), "1");
-    assert_eq!(run(&mut rt, r#"use "counter"; counter.next"#), "2");
+    assert_eq!(run(&mut rt, r#"use next from mod counter; next"#), "1");
+    assert_eq!(run(&mut rt, r#"counter = mod counter; counter.next"#), "2");
 }
 
 #[test]
 fn chain_provider_and_relative_names() {
-    let first = MemoryProvider::new().with("app/main", r#"use "./util"; put { util.twice 4 }"#);
+    let first = MemoryProvider::new().with("app/main", r#"use mod ./util; put { twice 4 }"#);
     let second = MemoryProvider::new().with("app/util", "pub fn twice (x: num) { put ($x * 2) }");
     let mut rt = Runtime::builder()
         .provider(ChainProvider::new().with(first).with(second))

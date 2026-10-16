@@ -1,0 +1,9 @@
+// `pub use` re-exports: named members, or every member of a glob.
+api = mod {
+    pub use double from mod lib/util;
+    pub use mod lib/shape;
+    pub use [extra = 1, sides = overridden];
+    pub sides = mine;
+    use [hidden = 1];
+};
+pln { keys $api } { api.double 2 } { api.area 2 3 } $api.sides $api.extra;

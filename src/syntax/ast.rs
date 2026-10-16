@@ -53,19 +53,12 @@ pub enum StmtKind {
     },
     /// `fn name (params) { … }` (hoisted).
     Fn(Rc<FnDecl>),
-    /// `mod name { … }`.
-    Mod {
-        /// Binding name.
-        name: Ident,
-        /// The module body.
-        body: Rc<Block>,
-    },
-    /// `use "path" [as name]`.
+    /// `use map` (a glob import) or `use a, b as c from map`.
     Use {
-        /// The module name expression.
-        path: Expr,
-        /// The variable to bind.
-        alias: Ident,
+        /// The map whose members are imported.
+        source: Expr,
+        /// The imported names, or `None` for a glob import.
+        items: Option<Vec<UseItem>>,
     },
     /// `return [value]`.
     Return(Option<Expr>),
@@ -205,8 +198,19 @@ pub enum ExprKind {
     For(Box<ForLoop>),
     /// `try body [catch name handler]`
     Try(Box<Expr>, Option<(Ident, Box<Expr>)>),
-    /// `use name` as an expression: the module's map.
-    Use(Box<Expr>),
+    /// `mod name`: loads a module and gives its map.
+    Mod(Box<Expr>),
+    /// `mod { … }`: a module literal.
+    ModLit(Rc<Block>),
+}
+
+/// One name in `use a, b as c from map`.
+#[derive(Debug, Clone)]
+pub struct UseItem {
+    /// The key in the map.
+    pub name: Ident,
+    /// The variable to bind (`name` unless renamed with `as`).
+    pub alias: Ident,
 }
 
 /// The parts of a `for` loop.

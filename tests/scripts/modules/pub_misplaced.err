@@ -1,4 +1,4 @@
-error: `pub` must be followed by `fn`, `mod`, `use`, `let` or `name = value`
+error: `pub` must be followed by `fn`, `use`, `let` or `name = value`
  --> pub_misplaced:2:5
   |
 2 |     pub x += 1;

@@ -1,1 +1,1 @@
-use "lib/nope";
+x = mod lib/nope;

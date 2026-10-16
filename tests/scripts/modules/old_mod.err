@@ -1,0 +1,5 @@
+error: modules are values now: write `geo = mod { … };`
+ --> old_mod:1:1
+  |
+1 | mod geo { pub pi = 3.14 }
+  | ^^^^^^^

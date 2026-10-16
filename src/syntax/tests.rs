@@ -32,8 +32,22 @@ fn sexp_stmt(stmt: &Stmt) -> String {
             LetValue::Ref(p) => format!("(let {name} &{})", sexp_place(p)),
         },
         StmtKind::Fn(decl) => sexp_fn(decl),
-        StmtKind::Mod { name, body } => format!("(mod {name} {})", sexp_block(body)),
-        StmtKind::Use { path, alias } => format!("(use {} {alias})", sexp(path)),
+        StmtKind::Use { source, items } => match items {
+            None => format!("(use * {})", sexp(source)),
+            Some(items) => {
+                let items: Vec<String> = items
+                    .iter()
+                    .map(|i| {
+                        if i.name == i.alias {
+                            i.name.to_string()
+                        } else {
+                            format!("{} as {}", i.name, i.alias)
+                        }
+                    })
+                    .collect();
+                format!("(use [{}] {})", items.join(", "), sexp(source))
+            }
+        },
         StmtKind::Return(v) => format!("(return{})", opt(v)),
         StmtKind::Clear(v) => format!("(clear{})", opt(v)),
         StmtKind::Break(v) => format!("(break{})", opt(v)),
@@ -165,7 +179,8 @@ fn sexp(expr: &Expr) -> String {
             Some((name, handler)) => format!("(try {} {name} {})", sexp(body), sexp(handler)),
             None => format!("(try {})", sexp(body)),
         },
-        ExprKind::Use(name) => format!("(use {})", sexp(name)),
+        ExprKind::Mod(name) => format!("(mod {})", sexp(name)),
+        ExprKind::ModLit(body) => format!("(mod {})", sexp_block(body)),
     }
 }
 
@@ -432,13 +447,29 @@ fn function_errors() {
 
 #[test]
 fn modules() {
-    assert_eq!(p(r#"use "net/http""#), r#"(use "net/http" http)"#);
-    assert_eq!(p(r#"use "my-lib.dog""#), r#"(use "my-lib.dog" my_lib)"#);
-    assert_eq!(p(r#"use "x" as y"#), r#"(use "x" y)"#);
-    assert_eq!(p("use $name as m"), "(use $name m)");
-    assert_eq!(p("mod m { x = 1 }"), "(mod m {(= x 1)})");
-    assert_eq!(p(r#"x = use "y""#), r#"(= x (use "y"))"#);
-    assert!(err("use $name").contains("add `as name`"));
+    assert_eq!(p(r#"x = mod "net/http""#), r#"(= x (mod "net/http"))"#);
+    assert_eq!(p("x = mod ./util"), r#"(= x (mod "./util"))"#);
+    assert_eq!(p("x = mod $name"), "(= x (mod $name))");
+    assert_eq!(p("x = mod { y = 1 }"), "(= x (mod {(= y 1)}))");
+    assert_eq!(p("put mod x"), r#"(call $put (mod "x"))"#);
+    assert_eq!(
+        p("mod x; mod {}"),
+        r#"(discard (mod "x")) (discard (mod {}))"#
+    );
+    assert_eq!(p("use $m"), "(use * $m)");
+    assert_eq!(p("use mod foo"), r#"(use * (mod "foo"))"#);
+    assert_eq!(p("use a from $m"), "(use [a] $m)");
+    assert_eq!(
+        p("use a, b as c,\n d from mod m"),
+        r#"(use [a, b as c, d] (mod "m"))"#
+    );
+    assert_eq!(p("pub use a from $m"), "(use [a] $m)");
+    assert!(err("use foo").contains("use mod foo;"));
+    assert!(err(r#"use "net/http""#).contains("use mod net/http;"));
+    assert!(err("mod m { x = 1 }").contains("`m = mod { … };`"));
+    assert!(err("use a, b $m").contains("expected `,` or `from`"));
+    assert!(err("x = (use $m)").contains("write `mod name`"));
+    assert!(err("mod x pln y").contains("`;`"));
 }
 
 #[test]

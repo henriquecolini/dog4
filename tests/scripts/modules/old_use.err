@@ -1,0 +1,5 @@
+error: `use` imports the members of a map; load the module with `use mod lib/util;`, or bind it with `x = mod lib/util;`
+ --> old_use:1:5
+  |
+1 | use "lib/util";
+  |     ^^^^^^^^^^

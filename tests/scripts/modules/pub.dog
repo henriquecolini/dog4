@@ -1,21 +1,21 @@
 // Only names declared `pub` are exported; the module's own code sees everything.
-mod bank {
+bank = mod {
     rate = 0.5;
     pub let currency = EUR;
     pub balance = 100;
     fn interest (x: num) { put ($x * $rate) }
     pub fn grow () { put { interest $balance } $currency }
-    pub use "lib/util";
-    pub mod sub { pub z = 1; w = 2 }
-}
+    pub util = mod lib/util;
+    pub sub = mod { pub z = 1; w = 2 };
+};
 pln { keys $bank } { bank.grow } { bank.util.double 3 } { keys $bank.sub };
 // A name is exported if any of its top-level declarations is `pub`.
-mod shapes {
+shapes = mod {
     pub fn size (x: num) { put $x }
     fn size (x: num, y: num) { put ($x * $y) }
     n = 1;
     pub n = 2;
-}
+};
 pln { keys $shapes } { shapes.size 2 3 } $shapes.n;
 // `pub` is only a keyword at the start of a statement.
 pln pub;

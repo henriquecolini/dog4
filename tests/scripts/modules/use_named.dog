@@ -1,0 +1,13 @@
+// `use names from map` binds members of any map as variables.
+use double from mod lib/util;
+pln { double 4 };
+use sides, area as surface from mod lib/shape;
+pln $sides.square { surface 2 3 };
+point = [x = 1, y = 2];
+use x, y as why from $point;
+pln $x $why;
+// Like `let`, a `use` in a block declares new variables that end with it.
+pln { use x from [x = inner]; put $x } $x;
+// Imported names are ordinary variables.
+x += 10;
+pln $x;

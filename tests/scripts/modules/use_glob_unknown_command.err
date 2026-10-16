@@ -1,0 +1,5 @@
+error: unknown command `nope`
+ --> use_glob_unknown_command:2:1
+  |
+2 | nope $a;
+  | ^^^^^^^

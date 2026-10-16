@@ -16,7 +16,7 @@ assert_eq!(out.to_string(), "21");
 
 `Runtime::run(name, source)` compiles and runs a script and returns what it
 outputs. `name` identifies the script in error messages and is the base for
-relative `use` paths. Other entry points:
+relative `mod` paths. Other entry points:
 
 | method | does |
 |---|---|
@@ -54,7 +54,7 @@ assert_eq!(out.take(), "hello\n");
   `post`; needs the `net` feature). Withheld builtins don't exist: using them is
   a compile error ("unknown command").
 * `.global(name, value)` adds a name every script sees (or replaces a builtin).
-* `.module(name, value)` registers a native module for `use "name"`.
+* `.module(name, value)` registers a native module for `mod name`.
 * `.provider(p)` says where other modules come from.
 * `.output(w)` is where `print` writes; `OutputBuffer` captures it in memory.
 * `.seed(n)` makes `random` reproducible.
@@ -114,7 +114,7 @@ telegram.def("send", "chat: num, %text", move |_vm, args| {
 telegram.def("send", "text: str", |_, _| Ok(Value::Null));
 
 let mut rt = Builder::new().module("telegram", telegram.into_value()).build();
-rt.run("bot", r#"use "telegram"; telegram.send "42" hello world"#).unwrap();
+rt.run("bot", r#"telegram = mod telegram; telegram.send "42" hello world"#).unwrap();
 assert_eq!(*sent.borrow(), ["42 <- hello world"]);
 ```
 
@@ -143,12 +143,12 @@ Errors are returned as `dog4::Error`: `Error::type_error(..)`,
 
 ## Module providers
 
-The runtime doesn't know about files. For `use "name"` it asks the native
+The runtime doesn't know about files. For `mod name` it asks the native
 modules registered with `.module`, then the provider:
 
 ```rust,ignore
 pub trait ModuleProvider {
-    /// Turn the name written in `use` into a canonical id. `from` is the id of the
+    /// Turn the name written after `mod` into a canonical id. `from` is the id of the
     /// importing module. The default resolves `./x` and `../x` relative to `from`.
     fn resolve(&self, name: &str, from: Option<&str>) -> Result<String, ProviderError>;
     /// Load the module with that id: source code, or a ready-made map.
@@ -185,7 +185,7 @@ let table = Table(HashMap::from([(
     "pub fn hi (name: str) { put \"hi $name\" }".to_string(),
 )]));
 let mut rt = Builder::new().provider(table).build();
-let out = rt.run("users/ana/main", r#"use "./greet"; greet.hi Bob"#).unwrap();
+let out = rt.run("users/ana/main", r#"use hi from mod ./greet; hi Bob"#).unwrap();
 assert_eq!(out.to_string(), "hi Bob");
 ```
 
@@ -256,7 +256,7 @@ fn handle(code: &str, user_modules: MemoryProvider) -> String {
 }
 
 let modules = MemoryProvider::new().with("dice", "pub fn d (n: num) { put ($n * 0 + 4) }");
-assert_eq!(handle(r#"use "dice"; pln rolled { dice.d 6 }"#, modules), "rolled 4\n");
+assert_eq!(handle(r#"use mod dice; pln rolled { d 6 }"#, modules), "rolled 4\n");
 let reply = handle("while true {}", MemoryProvider::new());
 assert!(reply.starts_with("error: ran out of fuel"));
 ```

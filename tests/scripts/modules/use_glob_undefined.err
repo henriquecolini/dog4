@@ -1,0 +1,5 @@
+error: `b` is not defined
+ --> use_glob_undefined:2:8
+  |
+2 | pln $a $b;
+  |        ^^

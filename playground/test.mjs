@@ -11,7 +11,7 @@ const checks = [
   ["println hi; pln [a (null)]", (r) => r.ok && r.printed === "hi\n" && r.output === "[a (null)]\n"],
   ["pln ok;\npln $nope", (r) => !r.ok && r.line === 2 && r.kind === "name"],
   ["while true {}", (r) => !r.ok && r.kind === "limit"],
-  ['use "greet"; greet.hi Bob', (r) => r.ok && r.output === "Hello Bob\n"],
+  ['use mod greet; hi Bob', (r) => r.ok && r.output === "Hello Bob\n"],
   ["put { random 10 }", (r) => r.ok && Number(r.output) < 10],
 ];
 let failed = 0;

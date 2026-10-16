@@ -22,7 +22,9 @@ pub use function::{
     Body, Function, NativeFn, Overload, ScriptFn, SigParam, Signature, parse_signature,
 };
 
-use crate::compile::{Capture, ModuleScope, Op, PreludeNames, Proto, Var, compile_module};
+use crate::compile::{
+    Capture, Fallback, ModuleScope, Op, PreludeNames, Proto, Var, compile_module,
+};
 use crate::error::{Error, ErrorKind, Limit, Result};
 use crate::limits::{Interrupt, Limits, Meter};
 use crate::module::{ModuleProvider, ModuleSource, ProviderError};
@@ -459,7 +461,7 @@ impl Vm {
         Ok(())
     }
 
-    /// Runs `use name`: returns the map directly when it's cached or native, or
+    /// Runs `mod name`: returns the map directly when it's cached or native, or
     /// pushes the module's frame (returning `None`) when it must run first.
     fn use_module(&mut self, name: Value) -> Result<Option<Value>> {
         let Value::Str(name) = name else {
@@ -1064,7 +1066,7 @@ impl Vm {
                     fail!(Error::thrown(v));
                 }
 
-                Op::Use => {
+                Op::LoadModule => {
                     let name = self.pop();
                     self.frames[fi].ip = ip;
                     match t!(self.use_module(name)) {
@@ -1079,9 +1081,79 @@ impl Vm {
                     t!(self.enter_module(module.main.clone(), env, FrameKind::Module { id: None }));
                     reload!();
                 }
+                Op::Import(c) => {
+                    let map = self.stack.last().unwrap_or_else(|| unreachable!());
+                    let v = t!(import_field(map, &proto.consts[c as usize]));
+                    self.stack.push(v);
+                }
+                Op::ExpectMap => {
+                    let v = self.stack.last().unwrap_or_else(|| unreachable!());
+                    if !matches!(v, Value::Map(_)) {
+                        let message = format!("`use` needs a map, not {}", v.describe());
+                        fail!(Error::type_error(message));
+                    }
+                }
+                Op::LoadImported(l) => {
+                    let lookup = &proto.lookups[l as usize];
+                    let cells = &self.frames[fi].cells;
+                    let found = lookup.sources.iter().find_map(|source| {
+                        match read_var(&self.stack, base, cells, &func, source.get()) {
+                            Ok(Value::Map(map)) => map.get(&*lookup.key).cloned(),
+                            _ => None,
+                        }
+                    });
+                    let v = match found {
+                        Some(v) => v,
+                        None => match lookup.fallback {
+                            Fallback::Var(var) => {
+                                t!(read_var(&self.stack, base, cells, &func, var.get()))
+                            }
+                            Fallback::Prelude(p) => self.prelude[p as usize].clone(),
+                            Fallback::Undefined => {
+                                let key = &lookup.key;
+                                fail!(Error::name_error(if lookup.command {
+                                    format!("unknown command `{key}`")
+                                } else {
+                                    format!("`{key}` is not defined")
+                                }))
+                            }
+                        },
+                    };
+                    self.stack.push(v);
+                }
             }
         }
     }
+}
+
+/// Reads a variable of the running frame.
+fn read_var(
+    stack: &[Value],
+    base: usize,
+    cells: &[Binding],
+    func: &ScriptFn,
+    var: Var,
+) -> Result<Value> {
+    match var {
+        Var::Local(s) => Ok(stack[base + s as usize].clone()),
+        Var::Cell(c) => cells[c as usize].read(),
+        Var::Upval(u) => func.upvals[u as usize].read(),
+        Var::Global(g) => func.module.get(g),
+    }
+}
+
+/// `use name from map`: the member `name` of `map`, which must exist.
+fn import_field(map: &Value, name: &Value) -> Result<Value> {
+    let Value::Map(map) = map else {
+        return Err(Error::type_error(format!(
+            "`use … from` needs a map, not {}",
+            map.describe()
+        )));
+    };
+    let name = name.as_str().unwrap_or_default();
+    map.get(name)
+        .cloned()
+        .ok_or_else(|| Error::name_error(format!("there is no `{name}` to import")))
 }
 
 /// Folds the top `n` values left to right (a glued word).

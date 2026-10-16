@@ -1,0 +1,31 @@
+// `use map` makes every member of the map visible by name.
+use [something = 10];
+pln $something;
+use mod lib/util;
+pln { double 21 };
+// Globs shadow builtins…
+pln { use [len = fn (x) { put "len of $x" }]; len abc };
+pln { len abc };
+// …and outer variables; a variable declared in the glob's own block wins.
+y = outer;
+pln { use [y = glob]; put $y } { use [y = glob]; y = local; put $y } $y;
+// The newest glob wins.
+pln { use [a = 1]; use [a = 2]; put $a };
+// Functions and closures see the globs around them, even later in their block.
+pln {
+    fn show () { put $z }
+    use [z = hoisted];
+    show
+};
+make = fn () { use [w = captured]; put fn () { put $w } };
+f = $make();
+pln ($f());
+// Top-level globs are visible to every function in the module.
+fn late () { put $later }
+use [later = "seen by late"];
+pln { late };
+// A glob holds the map as it was at the `use` (maps are values).
+m = [k = 1];
+use $m;
+m.k = 2;
+pln $k;

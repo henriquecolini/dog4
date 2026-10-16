@@ -14,7 +14,7 @@ thread_local! {
     static RESULT: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
 }
 
-/// Modules that `use` can load in the playground.
+/// Modules that `mod` can load in the playground.
 const MODULES: &[(&str, &str)] = &[
     (
         "greet",
@@ -137,7 +137,7 @@ mod tests {
         assert_eq!(err["ok"], false);
         assert_eq!(err["line"], 2);
         assert_eq!(err["kind"], "name");
-        let modules = execute("use \"greet\"; greet.hi Bob; put { shapes_ok }", 1, false);
+        let modules = execute("use mod greet; hi Bob; put { shapes_ok }", 1, false);
         assert_eq!(modules["ok"], false);
         let listing = execute("put 1", 1, true);
         assert!(listing["output"].as_str().unwrap().contains("Const"));

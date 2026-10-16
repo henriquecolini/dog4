@@ -1,1 +1,1 @@
-use "./cycle_b";
+use mod ./cycle_b;

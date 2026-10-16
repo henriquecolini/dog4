@@ -1,2 +1,2 @@
-use "lib/nested/inner";
-pln { inner.quadruple 3 };
+use quadruple from mod lib/nested/inner;
+pln { quadruple 3 };

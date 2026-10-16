@@ -219,10 +219,22 @@ impl ModuleEnv {
         }
     }
 
-    /// Looks a global up by name.
+    /// Looks a name up the way the module's top level sees it: its globals,
+    /// then its glob imports.
     pub fn lookup(&self, name: &str) -> Option<Value> {
-        let slot = self.scope.borrow().get(name)?;
-        self.get(slot).ok()
+        let scope = self.scope.borrow();
+        if let Some(slot) = scope.get(name) {
+            return self.get(slot).ok();
+        }
+        let globals = self.globals.borrow();
+        scope
+            .globs()
+            .iter()
+            .rev()
+            .find_map(|&g| match globals.get(g as usize) {
+                Some(Some(Value::Map(map))) => map.get(name).cloned(),
+                _ => None,
+            })
     }
 
     fn uninitialized(&self, slot: u32) -> Error {
@@ -231,18 +243,29 @@ impl ModuleEnv {
         Error::name_error(format!("`{name}` is used before it has a value"))
     }
 
-    /// The module's map: every initialized `pub` global.
+    /// The module's map: every initialized `pub` global, then the members of
+    /// its `pub use` glob imports that no `pub` name or newer glob provides.
     pub fn exports(&self) -> Value {
         let scope = self.scope.borrow();
         let globals = self.globals.borrow();
-        let map: Map = scope
+        let globs = scope.globs();
+        let mut map: Map = scope
             .names()
             .iter()
             .zip(globals.iter())
             .enumerate()
-            .filter(|(slot, _)| scope.is_public(*slot as u32))
+            .filter(|(slot, _)| scope.is_public(*slot as u32) && !globs.contains(&(*slot as u32)))
             .filter_map(|(_, (name, value))| Some((name.clone(), value.clone()?)))
             .collect();
+        for &g in globs.iter().rev().filter(|&&g| scope.is_public(g)) {
+            if let Some(Some(Value::Map(glob))) = globals.get(g as usize) {
+                for (name, value) in glob.iter() {
+                    if !map.contains_key(name) {
+                        map.insert(name.clone(), value.clone());
+                    }
+                }
+            }
+        }
         Value::map(map)
     }
 

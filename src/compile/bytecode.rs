@@ -249,9 +249,40 @@ pub enum Op {
     Throw,
 
     /// Pops a module name and pushes the module's map.
-    Use,
+    LoadModule,
     /// Runs inline module `modules[i]` and pushes its map.
     MakeModule(u32),
+    /// Pushes field `consts[c]` of the map on top of the stack, keeping the
+    /// map (`use name from map`). A missing field is an error.
+    Import(u32),
+    /// Fails unless the top of the stack is a map (`use map`).
+    ExpectMap,
+    /// Pushes a name that `use` globs may provide: `lookups[i]`.
+    LoadImported(u32),
+}
+
+/// How to read a name that glob imports (`use map`) may provide.
+#[derive(Debug, Clone)]
+pub struct Lookup {
+    /// The name.
+    pub key: Rc<str>,
+    /// The variables holding the glob-imported maps, in the order to check them.
+    pub sources: Box<[VarRef]>,
+    /// Where the name lives when no glob has it.
+    pub fallback: Fallback,
+    /// Whether the name is used as a command (only changes the error message).
+    pub command: bool,
+}
+
+/// Where a [`Lookup`] goes when no glob has the name.
+#[derive(Debug, Clone, Copy)]
+pub enum Fallback {
+    /// A variable.
+    Var(VarRef),
+    /// A prelude value.
+    Prelude(u32),
+    /// Nowhere: the name is not defined.
+    Undefined,
 }
 
 /// A captured variable, as seen from the closure being created.
@@ -278,6 +309,8 @@ pub struct Proto {
     pub protos: Box<[Rc<Proto>]>,
     /// Inline modules referenced by `MakeModule`.
     pub modules: Box<[Rc<ModuleProto>]>,
+    /// Glob lookups referenced by `LoadImported`.
+    pub lookups: Box<[Lookup]>,
     /// Number of plain slots (parameters first).
     pub n_slots: u16,
     /// Number of cells.

@@ -28,6 +28,8 @@ pub struct ModuleScope {
     index: FxHashMap<Rc<str>, u32>,
     /// For each slot, whether it was declared `pub`.
     public: Vec<bool>,
+    /// The hidden globals holding top-level glob imports (`use map`), oldest first.
+    globs: Vec<u32>,
 }
 
 impl ModuleScope {
@@ -41,6 +43,21 @@ impl ModuleScope {
         self.index.insert(name.clone(), i);
         self.public.push(false);
         i
+    }
+
+    /// The hidden global for a top-level glob import, creating it if needed.
+    pub fn glob(&mut self, name: &Rc<str>) -> u32 {
+        if let Some(i) = self.get(name) {
+            return i;
+        }
+        let i = self.global(name);
+        self.globs.push(i);
+        i
+    }
+
+    /// The hidden globals of top-level glob imports, oldest first.
+    pub fn globs(&self) -> &[u32] {
+        &self.globs
     }
 
     /// Exports global `slot` from the module.
@@ -104,14 +121,24 @@ pub fn compile_module(
         span: body.span,
     };
     for stmt in &body.stmts {
-        let name = match &stmt.kind {
-            StmtKind::Assign { target, .. } => Some(&target.root),
-            StmtKind::Let { name, .. } | StmtKind::Mod { name, .. } => Some(name),
-            StmtKind::Fn(decl) => Some(&decl.name),
-            StmtKind::Use { alias, .. } => Some(alias),
-            _ => None,
+        let names: Vec<&Ident> = match &stmt.kind {
+            StmtKind::Assign { target, .. } => vec![&target.root],
+            StmtKind::Let { name, .. } => vec![name],
+            StmtKind::Fn(decl) => vec![&decl.name],
+            StmtKind::Use {
+                items: Some(items), ..
+            } => items.iter().map(|item| &item.alias).collect(),
+            StmtKind::Use { items: None, .. } => {
+                let name = compiler.glob_name(stmt.span);
+                let slot = compiler.module.glob(&name);
+                if stmt.public {
+                    compiler.module.set_public(slot);
+                }
+                continue;
+            }
+            _ => continue,
         };
-        if let Some(name) = name {
+        for name in names {
             let slot = compiler.module.global(name);
             if stmt.public {
                 compiler.module.set_public(slot);
@@ -163,6 +190,7 @@ struct FnState {
     str_consts: FxHashMap<Rc<str>, u32>,
     protos: Vec<Rc<Proto>>,
     modules: Vec<Rc<ModuleProto>>,
+    lookups: Vec<Lookup>,
     scopes: Vec<Vec<(Ident, u16)>>,
     /// For each slot, the cell it was boxed into.
     slot_cells: Vec<Option<u16>>,
@@ -190,6 +218,7 @@ impl FnState {
             str_consts: FxHashMap::default(),
             protos: Vec::new(),
             modules: Vec::new(),
+            lookups: Vec::new(),
             scopes: Vec::new(),
             slot_cells: Vec::new(),
             n_cells: 0,
@@ -259,6 +288,18 @@ impl FnState {
                 other => other,
             };
         }
+        let boxed = |var: VarRef| match var.get() {
+            Var::Local(s) => cell(s).map_or(var, |c| VarRef::new(Var::Cell(c))),
+            _ => var,
+        };
+        for lookup in &mut self.lookups {
+            for source in lookup.sources.iter_mut() {
+                *source = boxed(*source);
+            }
+            if let Fallback::Var(var) = &mut lookup.fallback {
+                *var = boxed(*var);
+            }
+        }
         for &(slot, at) in &self.hoists {
             if let Some(c) = cell(slot) {
                 self.code[at] = Op::NewCell(c);
@@ -276,6 +317,7 @@ impl FnState {
             consts: self.consts.into_boxed_slice(),
             protos: self.protos.into_boxed_slice(),
             modules: self.modules.into_boxed_slice(),
+            lookups: self.lookups.into_boxed_slice(),
             n_slots: self.slot_cells.len() as u16,
             n_cells: self.n_cells,
             captures: self.upvals.into_boxed_slice(),
@@ -428,6 +470,40 @@ impl Compiler<'_> {
         self.prelude.get(name).map(Resolved::Prelude)
     }
 
+    /// The hidden name of the variable holding the map of the glob import
+    /// (`use map`) at `span`. It can't clash with a real name.
+    fn glob_name(&self, span: Span) -> Ident {
+        format!("*{}:{}", self.source.0, span.start).into()
+    }
+
+    /// The hidden variables of the glob imports that may provide `name`, in
+    /// the order to check them: those of the scopes nested inside the one
+    /// that declares `name` (newest first in each scope), then the module's
+    /// if `name` isn't a module global.
+    fn glob_sources(&self, name: &str) -> Vec<Ident> {
+        let mut found = Vec::new();
+        for f in self.funcs.iter().rev() {
+            for scope in f.scopes.iter().rev() {
+                if scope.iter().any(|(n, _)| &**n == name) {
+                    return found;
+                }
+                let globs = scope.iter().rev().filter(|(n, _)| n.starts_with('*'));
+                found.extend(globs.map(|(n, _)| n.clone()));
+            }
+        }
+        if self.module.get(name).is_none() {
+            let names = self.module.names();
+            found.extend(
+                self.module
+                    .globs()
+                    .iter()
+                    .rev()
+                    .map(|&g| names[g as usize].clone()),
+            );
+        }
+        found
+    }
+
     fn resolve_upval(&mut self, func: usize, name: &str) -> Option<u16> {
         if func == 0 {
             return None;
@@ -454,6 +530,35 @@ impl Compiler<'_> {
     }
 
     fn load(&mut self, name: &Ident, span: Span) -> Result<()> {
+        self.load_name(name, span, false)
+    }
+
+    /// Pushes the value of `name`, checking the glob imports that may provide it.
+    fn load_name(&mut self, name: &Ident, span: Span, command: bool) -> Result<()> {
+        let globs = self.glob_sources(name);
+        if !globs.is_empty() {
+            let sources = globs
+                .iter()
+                .map(|glob| VarRef::new(self.resolve_var(glob).unwrap_or_else(|| unreachable!())))
+                .collect();
+            let fallback = match self.resolve(name) {
+                Some(Resolved::Prelude(p)) => Fallback::Prelude(p),
+                Some(_) => Fallback::Var(VarRef::new(
+                    self.resolve_var(name).unwrap_or_else(|| unreachable!()),
+                )),
+                None => Fallback::Undefined,
+            };
+            let f = self.f();
+            let index = u32::try_from(f.lookups.len()).map_err(|_| self.too_big("names"))?;
+            self.f().lookups.push(Lookup {
+                key: name.clone(),
+                sources,
+                fallback,
+                command,
+            });
+            self.emit(Op::LoadImported(index));
+            return Ok(());
+        }
         match self.resolve(name) {
             Some(Resolved::Local(slot)) => self.emit(Op::LoadLocal(slot)),
             Some(Resolved::Upval(u)) => self.emit(Op::LoadUpval(u)),
@@ -493,6 +598,18 @@ impl Compiler<'_> {
     /// A block none of whose statements output anything (only assignments,
     /// discarded loops, …) always evaluates to `null`, so it skips the accumulator.
     fn block_body(&mut self, stmts: &[Stmt]) -> Result<()> {
+        if !self.at_module_top() {
+            // Glob imports are visible in their whole block, so hoisted
+            // functions see them (empty until the `use` runs).
+            for stmt in stmts {
+                if let StmtKind::Use { items: None, .. } = stmt.kind {
+                    let name = self.glob_name(stmt.span);
+                    let slot = self.new_slot(&name)?;
+                    self.emit(Op::Null);
+                    self.store_new(Target::Slot(slot));
+                }
+            }
+        }
         self.hoist_fns(stmts)?;
         let silent = stmts
             .iter()
@@ -608,24 +725,31 @@ impl Compiler<'_> {
                 }
             },
             StmtKind::Fn(_) => {}
-            StmtKind::Mod { name, body } => {
-                let mut scope = ModuleScope::default();
-                let main = compile_module(body, self.prelude, &mut scope, self.source)?;
-                let module = Rc::new(ModuleProto { main, scope });
-                let f = self.f();
-                f.modules.push(module);
-                let index = (f.modules.len() - 1) as u32;
+            StmtKind::Use { source, items } => {
+                self.expr(source)?;
                 self.span = stmt.span;
-                self.emit(Op::MakeModule(index));
-                let target = self.declare(name)?;
-                self.store_new(target);
-            }
-            StmtKind::Use { path, alias } => {
-                self.expr(path)?;
-                self.span = stmt.span;
-                self.emit(Op::Use);
-                let target = self.declare(alias)?;
-                self.store_new(target);
+                match items {
+                    Some(items) => {
+                        for item in items {
+                            let c = self.constant(Value::str(&*item.name))?;
+                            self.emit(Op::Import(c));
+                            let target = self.declare(&item.alias)?;
+                            self.store_new(target);
+                        }
+                        self.emit(Op::Pop);
+                    }
+                    None => {
+                        self.emit(Op::ExpectMap);
+                        let name = self.glob_name(stmt.span);
+                        if self.at_module_top() {
+                            let slot = self.module.glob(&name);
+                            self.emit(Op::StoreGlobal(slot));
+                        } else {
+                            let var = self.resolve_var(&name).unwrap_or_else(|| unreachable!());
+                            self.store_var(var);
+                        }
+                    }
+                }
             }
             StmtKind::Return(value) => {
                 self.opt_expr(value.as_ref())?;
@@ -706,7 +830,7 @@ impl Compiler<'_> {
             return Ok(());
         }
         let Some(var) = self.resolve_var(&target.root) else {
-            return Err(self.error(format!("`{}` is not defined", target.root), target.span));
+            return Err(self.undefined_place(&target.root, target.span));
         };
         let keys = self.path_keys(&target.path)?;
         self.expr(value)?;
@@ -734,6 +858,20 @@ impl Compiler<'_> {
         Ok(keys)
     }
 
+    /// The error for changing or referencing `name` when it isn't a variable.
+    fn undefined_place(&self, name: &str, span: Span) -> Error {
+        if self.glob_sources(name).is_empty() {
+            self.error(format!("`{name}` is not defined"), span)
+        } else {
+            self.error(
+                format!(
+                    "`{name}` is not a variable here; names imported with `use` can't be changed"
+                ),
+                span,
+            )
+        }
+    }
+
     /// Pushes a reference to `place`.
     fn make_ref(&mut self, place: &Place) -> Result<()> {
         let var = match self.resolve(&place.root) {
@@ -746,7 +884,7 @@ impl Compiler<'_> {
                     place.span,
                 ));
             }
-            None => return Err(self.error(format!("`{}` is not defined", place.root), place.span)),
+            None => return Err(self.undefined_place(&place.root, place.span)),
         };
         let keys = self.path_keys(&place.path)?;
         self.span = place.span;
@@ -931,9 +1069,20 @@ impl Compiler<'_> {
                 }
                 self.patch_jump(to_end);
             }
-            ExprKind::Use(name) => {
+            ExprKind::Mod(name) => {
                 self.expr(name)?;
-                self.emit(Op::Use);
+                self.span = expr.span;
+                self.emit(Op::LoadModule);
+            }
+            ExprKind::ModLit(body) => {
+                let mut scope = ModuleScope::default();
+                let main = compile_module(body, self.prelude, &mut scope, self.source)?;
+                let module = Rc::new(ModuleProto { main, scope });
+                let f = self.f();
+                f.modules.push(module);
+                let index = (f.modules.len() - 1) as u32;
+                self.span = expr.span;
+                self.emit(Op::MakeModule(index));
             }
         }
         Ok(())
@@ -1036,7 +1185,11 @@ impl Compiler<'_> {
     }
 
     fn call(&mut self, callee: &Expr, args: &[Arg], span: Span) -> Result<()> {
-        if let ExprKind::Var(name) = &callee.kind {
+        let imported = match &callee.kind {
+            ExprKind::Var(name) => !self.glob_sources(name).is_empty(),
+            _ => false,
+        };
+        if let (ExprKind::Var(name), false) = (&callee.kind, imported) {
             let resolved = self.resolve(name);
             if resolved.is_none() {
                 return Err(self.error(format!("unknown command `{name}`"), callee.span));
@@ -1055,7 +1208,10 @@ impl Compiler<'_> {
                 }
             }
         }
-        self.expr(callee)?;
+        match &callee.kind {
+            ExprKind::Var(name) if imported => self.load_name(name, callee.span, true)?,
+            _ => self.expr(callee)?,
+        }
         if args.iter().any(|a| matches!(a, Arg::Splat(_))) {
             self.emit(Op::MakeArr(0));
             for arg in args {

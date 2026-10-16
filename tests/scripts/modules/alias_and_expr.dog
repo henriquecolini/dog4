@@ -1,5 +1,0 @@
-use "lib/util" as u;
-pln { u.double 4 } ((use "lib/util").double(5));
-name = "lib/util";
-dynamic = use $name;
-pln ($dynamic.double(6)) ($dynamic == $u);

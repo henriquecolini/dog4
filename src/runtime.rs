@@ -59,7 +59,7 @@ impl Builder {
         self
     }
 
-    /// Sets how `use "name"` finds modules.
+    /// Sets how `mod name` finds modules.
     pub fn provider(mut self, provider: impl ModuleProvider + 'static) -> Builder {
         self.provider = Some(Box::new(provider));
         self
@@ -71,7 +71,7 @@ impl Builder {
         self
     }
 
-    /// Registers a native module: `use "name"` gives `exports` (usually a map
+    /// Registers a native module: `mod name` gives `exports` (usually a map
     /// of functions built with [`Library`](crate::Library)) without asking the provider.
     pub fn module(mut self, name: &str, exports: Value) -> Builder {
         self.modules.push((name.into(), exports));
@@ -160,7 +160,7 @@ impl Runtime {
     }
 
     /// Runs `source` as an entry script named `name` and returns what it outputs.
-    /// Relative `use` paths inside it resolve against `name`.
+    /// Relative `mod` paths inside it resolve against `name`.
     pub fn run(&mut self, name: &str, source: &str) -> Result<Value> {
         self.vm.reset_meter();
         let result = self.vm.run_source(name, source);
