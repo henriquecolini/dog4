@@ -1,0 +1,15 @@
+// A line comment.
+/* nested /* block */ comment */
+fn greet (name: str, times: num) {
+    greeting = "hello $name";
+    pln $greeting;
+    if ($times > 1) {
+        for i in (0..$times) { put "$i " }
+    }
+}
+use truncate from mod sys/text;
+config = [host = localhost, port = 8080, debug = true];
+total = (1 + 2.5) * 3;
+pln 'literal $notavar';
+pln "call: $greet(world, 2)";
+pln $config.host $config[port];

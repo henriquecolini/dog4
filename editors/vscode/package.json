@@ -1,0 +1,52 @@
+{
+  "name": "dog4",
+  "displayName": "dog4",
+  "description": "Syntax highlighting for the dog4 scripting language.",
+  "version": "0.1.0",
+  "publisher": "henriquecolini",
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/henriquecolini/dog4.git",
+    "directory": "editors/vscode"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "dog",
+        "aliases": [
+          "dog4",
+          "dog"
+        ],
+        "extensions": [
+          ".dog"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "dog",
+        "scopeName": "source.dog",
+        "path": "./syntaxes/dog.tmLanguage.json"
+      }
+    ]
+  },
+  "dependencies": {
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.2.0"
+  },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.mjs\""
+  },
+  "devDependencies": {
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.2.0"
+  }
+}
