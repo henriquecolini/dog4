@@ -138,6 +138,8 @@ fn range(vm: &mut Vm, args: &mut [Value]) -> Result<Value> {
 fn len(_: &mut Vm, args: &mut [Value]) -> Result<Value> {
     let n = match (&args[0], args.get(1)) {
         (Value::Map(map), None) => map.len(),
+        // Counted in place: `seq` would copy the whole array.
+        (Value::Arr(items), None) => items.len(),
         (value, sep) => seq(value, sep)?.len(),
     };
     Ok(Value::Int(n as i64))
