@@ -1,0 +1,33 @@
+// Merges two sorted arrays into one sorted array.
+fn merge (a: arr, b: arr) {
+    let i = 0;
+    let j = 0;
+    let out = while ($i < (len $a) && $j < (len $b)) [
+        if ($a[$i] <= $b[$j]) {
+            i += 1;
+            put $a[($i - 1)]
+        } else {
+            j += 1;
+            put $b[($j - 1)]
+        }
+    ];
+    // Whatever is left on either side is already sorted.
+    rest_a = for k in ($i..(len $a)) [$a[$k]];
+    rest_b = for k in ($j..(len $b)) [$b[$k]];
+    put $out$rest_a$rest_b
+}
+
+fn mergesort (xs: arr) {
+    n = (len $xs);
+    mid = (floor ($n / 2));
+    put if ($n <= 1)
+        $xs
+    else
+        { merge
+            { mergesort for i in (0..$mid) [$xs[$i]] }
+            { mergesort for i in ($mid..$n) [$xs[$i]] } }
+}
+
+pln { mergesort [5 3 9 1 5 8 2 7] };
+pln { mergesort [10 -3 7 7 0 22 -15 4 4 1] };
+pln { mergesort [] } { mergesort [42] } { mergesort [2 1] } { mergesort [pear apple fig] };

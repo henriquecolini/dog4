@@ -26,6 +26,7 @@ menu = [
     ("Overloads by type", "overloads"),
     ("Errors and the sandbox", "sandbox"),
     ("FizzBuzz", "fizzbuzz"),
+    ("Merge sort", "mergesort"),
     ("Chat-bot commands", "bot"),
     ("Inventory with references", "inventory"),
     ("HTML templates", "html"),
