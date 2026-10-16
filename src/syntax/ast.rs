@@ -170,6 +170,8 @@ pub enum ExprKind {
     Field(Box<Expr>, Ident),
     /// `expr[expr]`
     Index(Box<Expr>, Box<Expr>),
+    /// `expr[lo..hi]`, `expr[lo..]`, `expr[..hi]`, `expr[..]`
+    Slice(Box<Expr>, Option<Box<Expr>>, Option<Box<Expr>>),
     /// Pieces of one word, combined with the fold: `user_$id`.
     Glue(Vec<Expr>),
     /// Pieces of a double-quoted string, concatenated as text.

@@ -1,0 +1,11 @@
+pln { date.format 0 } { date.format 1700000000.5 "%a %e %b %Y %H:%M:%S.%f %Z %j %u %w %%" };
+pln { date.format -1 } { date.format 951782400 "%F" } { date.format 1709207100 "%A %d %B %y, %I:%M %p (%s)" };
+pln { date.parse 2024-01-01 } { date.parse "2024-01-01T00:00:00Z" } { date.parse "2024-01-01 03:00:00-03:00" } { date.parse "2024-01-01T00:00:00.5+0100" };
+pln { date.parse "Thu, 29 Feb 2024 11:45" "%a, %d %b %Y %H:%M" } { date.parse "5/3/99 4:07 pm" "%m/%d/%y %I:%M %p" } { date.parse 1700000000 "%s" };
+pln { date.parts 1709207100 };
+t = { date.parse "2024-12-31T23:59:59Z" };
+pln { date.format ($t + 1) } { date.parts $t }.yday;
+pln (try { date.parse 2023-02-29 } catch e { put $e.message });
+pln (try { date.parse "2024-01-01 junk" } catch e { put $e.message });
+pln (try { date.format 0 "%Q" } catch e { put $e.message });
+pln (try { date.format 1e20 } catch e { put $e.message });

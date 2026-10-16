@@ -50,11 +50,13 @@ assert_eq!(out.take(), "hello\n");
 * `Builder::sandboxed()` starts from `Limits::sandbox()` and withholds the
   network. Give it an `output` you control.
 * `.allow(capability, bool)` grants or withholds `Print` (`print`, `println`),
-  `Eval` (`eval`), `Random` (`random`, `shuffle`, `pick`) and `Net` (`get`,
-  `post`; needs the `net` feature). Withheld builtins don't exist: using them is
-  a compile error ("unknown command").
+  `Eval` (`eval`), `Random` (`random`, `random_float`, `shuffle`, `pick`,
+  `sample`, `uuid`), `Time` (`now`) and `Net` (`get`, `post`, `fetch`; needs the
+  `net` feature). Withheld builtins don't exist: using them is a compile error
+  ("unknown command").
 * `.global(name, value)` adds a name every script sees (or replaces a builtin).
-* `.module(name, value)` registers a native module for `mod name`.
+* `.module(name, value)` registers a native module for `mod name`. Its
+  functions are renamed `name.f`, so errors say `telegram.send`, not `send`.
 * `.provider(p)` says where other modules come from.
 * `.output(w)` is where `print` writes; `OutputBuffer` captures it in memory.
 * `.seed(n)` makes `random` reproducible.
@@ -125,7 +127,9 @@ assert_eq!(*sent.borrow(), ["42 <- hello world"]);
 ```
 
 A single native can also be made with `Value::native(name, params, f)` and
-handed to scripts with `Builder::global`.
+handed to scripts with `Builder::global`. To nest a library inside another
+(like the builtin `json`), use `lib.module("name", inner)`; `inner.into_module(
+"name")` gives the map on its own. Both name the functions `name.f` in errors.
 
 Natives receive `&mut Vm`, which can call back into scripts (`vm.call(&f,
 args)`), print (`vm.print(text)`), charge for work (`vm.meter()`) and use the

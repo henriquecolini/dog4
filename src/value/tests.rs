@@ -196,7 +196,7 @@ fn truthiness() {
 fn display_and_repr() {
     assert_eq!(s("hi").to_string(), "hi");
     assert_eq!(Value::Null.to_string(), "");
-    assert_eq!(Value::Null.repr(), "(null)");
+    assert_eq!(Value::Null.repr(), "null");
     assert_eq!(Value::num(f64::INFINITY).to_string(), "inf");
     assert_eq!(
         arr(&[Value::num(f64::INFINITY), Value::num(f64::NAN)]).to_string(),
@@ -207,7 +207,7 @@ fn display_and_repr() {
     assert_eq!(Value::num(-2.5).to_string(), "-2.5");
     assert_eq!(
         arr(&[s("a"), Value::Int(1), Value::Null, s("q\"\n$")]).to_string(),
-        r#"[a 1 (null) "q\"\n\$"]"#
+        r#"[a 1 null "q\"\n\$"]"#
     );
     assert_eq!(
         map(&[("k", arr(&[])), ("x", map(&[])), ("two words", s("5"))]).to_string(),
@@ -388,7 +388,7 @@ fn range_values() {
 #[test]
 fn json_round_trip_and_errors() {
     let v = parse_json(r#"{"a": [1, 2.5, "x", null, true], "b": {}}"#).unwrap();
-    assert_eq!(v.to_string(), "[a = [1 2.5 x (null) true], b = [=]]");
+    assert_eq!(v.to_string(), "[a = [1 2.5 x null true], b = [=]]");
     let json = to_json(&v).unwrap();
     assert_eq!(from_json(json), v);
     assert!(parse_json("{").is_err());
@@ -473,5 +473,6 @@ proptest! {
     #[test]
     fn parse_num_never_panics(text in ".{0,12}") {
         let _ = parse_num(&text);
+        let _ = crate::value::number_literal(&text);
     }
 }

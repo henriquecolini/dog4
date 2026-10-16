@@ -16,7 +16,7 @@ const escapeHtml = (s) =>
 const span = (cls, text) => `<span class="t-${cls}">${escapeHtml(text)}</span>`;
 const isIdentStart = (c) => /[\p{L}_]/u.test(c);
 const isIdentChar = (c) => /[\p{L}_0-9]/u.test(c);
-const isNumber = (word) => /^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(word);
+const isNumber = (word) => /^-?\d[\d_]*(\.\d[\d_]*)?([eE][+-]?\d[\d_]*)?$/.test(word);
 
 /** End index of a variable path (`name.field[index]`) starting at `i`. */
 function pathEnd(src, i) {
@@ -147,6 +147,18 @@ export function highlight(src) {
     if (c === "\\") {
       out += span("esc", src.slice(i, i + 2));
       i += 2;
+      atStatement = false;
+      continue;
+    }
+    if (src.startsWith('"""', i)) {
+      // A raw string: closed by a run of exactly as many quotes as opened it.
+      const open = /^"+/.exec(src.slice(i))[0].length;
+      const close = new RegExp(`(?<!")"{${open}}(?!")`, "g");
+      close.lastIndex = i + open;
+      const found = close.exec(src);
+      const end = found ? found.index + open : src.length;
+      out += span("str", src.slice(i, end));
+      i = end;
       atStatement = false;
       continue;
     }

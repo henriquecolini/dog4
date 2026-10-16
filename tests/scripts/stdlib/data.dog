@@ -1,0 +1,11 @@
+l = [a b c];
+pln { insert $l 0 x } { insert $l 3 x } { insert $l -1 x } { remove_at $l 0 } { remove_at $l -1 } $l;
+pln { flatten [[1 2] [3 [4]] 5 []] } { unique [1 2 1 "1" a a [1] [1]] } { unique [] };
+pln { zip [a b c] [1 2] } { zip [] [1] } { chunk [1 2 3 4 5] 2 } { chunk [] 3 };
+m = [name = Ana, age = 30, admin = true];
+pln { remove $m age } { remove $m age admin missing } { has $m name } { has $m nope } $m;
+pln { entries $m } { from_entries { entries $m } } { from_entries [] } { entries [=] };
+pln (try { insert $l 5 x } catch e { put $e.message });
+pln (try { remove_at [] 0 } catch e { put $e.message });
+pln (try { chunk $l 0 } catch e { put $e.message });
+pln (try { from_entries [[a]] } catch e { put $e.message });

@@ -1,0 +1,5 @@
+error: `upper` followed by arguments is a command, and commands only run inside blocks: write `{ upper … }`, or call it as `upper(…)`
+ --> command_after_assign:1:5
+  |
+1 | x = upper hello;
+  |     ^^^^^

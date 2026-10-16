@@ -7,4 +7,4 @@ pln { put hi; put 5 } { put 5; put hi } { put is; put " "; put true };
 pln { put [a]; put b } { put a; put [b] };
 pln { put [] } { put [=] };
 x = {};
-pln (type $x) "[$x]";
+pln { type $x } "[$x]";

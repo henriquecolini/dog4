@@ -22,10 +22,11 @@ instead: `false null 0 "" [] [=]` are falsy. Comparisons return booleans, so
 
 ## Bare words can be numbers, and numbers add up
 
-A bare word that reads exactly like a number or a boolean is one (`5`, `-2.5`,
-`true`); text that merely looks numeric stays text (`007`, `1.50`), and quoted
-words are always text, so printing is unaffected. `null` as a bare word is
-still the text `"null"`.
+A bare word that is a literal is that value: numbers (`5`, `-2.5`, `1e3`,
+`1_000`), `true`, `false` and `null`. A number prints in its own form, so
+`pln 007 1.50` prints `7 1.5` where dog3 printed `007 1.50`; quote words that
+must stay text (`"007"`). `null` as a bare word is nothing, which prints as
+nothing.
 
 Blocks fold their outputs by type, and numbers **add**:
 
@@ -71,11 +72,18 @@ separate arguments.
 
 * Commas and mid-word apostrophes are plain text: `pln Hello, I'm here`.
 * `//` starts a comment only between tokens, so `pln http://x.com` works.
-* `range n` returns an array (`range min max step sep` still returns text).
+* A backslash only escapes punctuation and spaces (`\$`, `\"`, `\ `) or makes
+  a control character (`\n`, `\t`, `\r`, `\0`). dog3 dropped the backslash of
+  any other escape, so `"\d+"` was `d+`; dog4 reports an error. Write `\\d+`,
+  or a raw string: `"""\d+"""`.
+* `range` always returns an array of numbers. dog3's `range min max step sep`,
+  which returned text, is gone: write `{ join { range min max step } sep }`.
 
 ## New things
 
-Expressions in `( … )` and after `=`, typed and overloaded functions, lambdas
+Raw strings (`"""…"""`), slices (`$list[1..3]`), expressions in `( … )` and
+after `=` (commands go in blocks there: `x = { len $list }`), typed and
+overloaded functions, lambdas
 and closures, value bodies (`fn f (x) ($x * 2)`), references (`&x`), `let`,
 `try`/`catch`/`throw`, `break`/`continue`, map and array literals, modules
 (`mod`, `use`, `pub`), and a sandbox for running untrusted code. See the [README](README.md) and the

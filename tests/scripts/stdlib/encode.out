@@ -1,0 +1,14 @@
+a%20b%26c%2F%C3%A9~ a b&c/é~ a+b
+q=dog%204&tag=a&tag=b&n=5 [""]
+[scheme = https, user = u, password = p@ss, host = Example.com, port = 8080, path = /a/b, query = [x = "1", y = ["2" "3 4"]], fragment = frag]
+[scheme = http, user = null, password = null, host = "[::1]", port = null, path = /, query = [=], fragment = null]
+aGVsbG8gd8O2cmxk hello wörld hi 
+??? ??? hi
+68c3a9 hé
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8
+"example.com" is not a URL: it has no `scheme://`
+invalid percent escape at byte 0 of "%zz"
+invalid base64 text
+the decoded base64 is not UTF-8 text
+hex text needs an even number of digits

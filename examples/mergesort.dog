@@ -2,7 +2,7 @@
 fn merge (a: arr, b: arr) {
     let i = 0;
     let j = 0;
-    let out = while ($i < (len $a) && $j < (len $b)) [
+    let out = while ($i < { len $a } && $j < { len $b }) [
         if ($a[$i] <= $b[$j]) {
             i += 1;
             put $a[($i - 1)]
@@ -12,14 +12,14 @@ fn merge (a: arr, b: arr) {
         }
     ];
     // Whatever is left on either side is already sorted.
-    rest_a = for k in ($i..(len $a)) [$a[$k]];
-    rest_b = for k in ($j..(len $b)) [$b[$k]];
+    rest_a = for k in ($i..{ len $a }) [$a[$k]];
+    rest_b = for k in ($j..{ len $b }) [$b[$k]];
     put $out$rest_a$rest_b
 }
 
 fn mergesort (xs: arr) {
-    n = (len $xs);
-    mid = (floor ($n / 2));
+    n = { len $xs };
+    mid = { floor ($n / 2) };
     put if ($n <= 1)
         $xs
     else

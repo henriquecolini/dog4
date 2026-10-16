@@ -9,4 +9,4 @@ inc = fn (x) { put ($x + 1) };
 dbl = fn (x) { put ($x * 2) };
 h = { compose $inc $dbl };
 pln ($h(5));
-pln $inc (type $inc);
+pln $inc { type $inc };

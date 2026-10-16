@@ -31,7 +31,7 @@ use crate::module::{ModuleProvider, ModuleSource, ProviderError};
 use crate::syntax::{SourceMap, parse};
 use crate::value::{
     Map, Type, UpdateOp, Value, add_assign, coerce, compare, div, get_key, key_text, mul, neg,
-    range, rem, sub, update_path,
+    range, rem, slice, sub, update_path,
 };
 use iter::Iter;
 
@@ -505,6 +505,7 @@ impl Vm {
         let id: Rc<str> = id.into();
         match source {
             ModuleSource::Native(module) => {
+                let module = crate::stdlib::qualify(&id, module);
                 self.cache.insert(id, module.clone());
                 Ok(Some(module))
             }
@@ -741,6 +742,13 @@ impl Vm {
                     let key = self.pop();
                     let v = self.pop();
                     let r = t!(get_key(&v, &key));
+                    self.stack.push(r);
+                }
+                Op::Slice => {
+                    let hi = self.pop();
+                    let lo = self.pop();
+                    let v = self.pop();
+                    let r = t!(slice(&v, &lo, &hi, &mut self.meter));
                     self.stack.push(r);
                 }
 

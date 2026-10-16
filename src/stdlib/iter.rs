@@ -124,15 +124,9 @@ fn range(vm: &mut Vm, args: &mut [Value]) -> Result<Value> {
         (span - 1) / step.abs() + 1
     } as usize;
     vm.meter().coll_len(len)?;
-    let numbers = (0..len as i64).map(|i| lo + i * step);
-    match args.get(3) {
-        Some(sep) => {
-            let sep = sep.to_string();
-            let words: Vec<String> = numbers.map(|n| n.to_string()).collect();
-            checked_str(vm, words.join(&sep))
-        }
-        None => Ok(Value::arr(numbers.map(Value::Int).collect())),
-    }
+    Ok(Value::arr(
+        (0..len as i64).map(|i| Value::Int(lo + i * step)).collect(),
+    ))
 }
 
 fn len(_: &mut Vm, args: &mut [Value]) -> Result<Value> {
@@ -157,7 +151,6 @@ pub(super) fn install(lib: &mut Library) {
     lib.def("range", "max: num", range);
     lib.def("range", "min: num, max: num", range);
     lib.def("range", "min: num, max: num, step: num", range);
-    lib.def("range", "min: num, max: num, step: num, sep", range);
     lib.def("keys", "map: map", |_, args| {
         let Value::Map(map) = &args[0] else {
             return Ok(Value::Null);
@@ -232,6 +225,46 @@ pub(super) fn install(lib: &mut Library) {
         vm.meter().tick(items.len() as u64)?;
         sort_values(&mut items, |v| v.clone())?;
         Ok(Value::arr(items))
+    });
+    lib.def("last_index_of", "items, needle", |_, args| {
+        let found = match (&args[0], &args[1]) {
+            (Value::Arr(items), needle) => items.iter().rposition(|x| x == needle),
+            (Value::Str(s), needle) => {
+                let needle = needle.to_string();
+                s.rfind(&needle).map(|byte| s[..byte].chars().count())
+            }
+            (other, _) => {
+                return Err(Error::type_error(format!(
+                    "can't search inside {}",
+                    other.describe()
+                )));
+            }
+        };
+        Ok(found.map_or(Value::Null, |i| Value::Int(i as i64)))
+    });
+    // Occurrences of an element in an array, or of a substring in text.
+    lib.def("count", "items, needle", |vm, args| {
+        let n = match (&args[0], &args[1]) {
+            (Value::Arr(items), needle) => {
+                vm.meter().tick(items.len() as u64)?;
+                items.iter().filter(|x| *x == needle).count()
+            }
+            (Value::Str(s), needle) => {
+                let needle = needle.to_string();
+                if needle.is_empty() {
+                    return Err(Error::value_error("can't count empty text"));
+                }
+                s.matches(&needle).count()
+            }
+            (Value::Null, _) => 0,
+            (other, _) => {
+                return Err(Error::type_error(format!(
+                    "can't search inside {}",
+                    other.describe()
+                )));
+            }
+        };
+        Ok(Value::Int(n as i64))
     });
     lib.def("index_of", "items, needle", |_, args| {
         let found = match (&args[0], &args[1]) {

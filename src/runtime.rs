@@ -73,8 +73,10 @@ impl Builder {
 
     /// Registers a native module: `mod name` gives `exports` (usually a map
     /// of functions built with [`Library`](crate::Library)) without asking the provider.
+    /// Its functions are named `name.f` in errors.
     pub fn module(mut self, name: &str, exports: Value) -> Builder {
-        self.modules.push((name.into(), exports));
+        self.modules
+            .push((name.into(), crate::stdlib::qualify(name, exports)));
         self
     }
 

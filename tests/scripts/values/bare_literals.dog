@@ -1,5 +1,7 @@
-// Bare words that read exactly like a number or bool are one; anything else is text.
-pln { type 5 } { type -2.5 } { type true } { type false };
-pln { type 007 } { type 1.50 } { type 1e3 } { type 5px } { type null } { type +5 };
-pln 007 1.50 1e3;
+// Bare words that are literals (numbers as in expressions, true, false, null)
+// are typed; anything else is text, and quoting always makes text.
+pln { type 5 } { type -2.5 } { type true } { type false } { type null };
+pln { type 007 } { type 1.50 } { type 1e3 } { type 1_000 } { type -0.5e-3 };
+pln { type 5px } { type +5 } { type inf } { type 1. } { type "5" } { type 'null' };
+pln 007 1.50 1e3 1_000 -0.5e-3 "007";
 pln { put 1; put 2 } { put 1.5; put 1.5 };

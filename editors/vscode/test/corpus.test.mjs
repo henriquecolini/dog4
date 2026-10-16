@@ -34,6 +34,7 @@ const grammar = await registry.loadGrammar("source.dog");
 const EXPECTED_UNTERMINATED = new Set([
   "tests/scripts/errors/syntax_unclosed_comment.dog",
   "tests/scripts/errors/syntax_unclosed_string.dog",
+  "tests/scripts/words/raw_string_unclosed.dog",
 ]);
 
 function walk(dir, out = []) {

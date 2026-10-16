@@ -5,6 +5,8 @@
 //! `first: num, %rest: num`, which is why `add 1 2` works on bare words.
 
 mod core;
+mod data;
+mod encode;
 mod func;
 mod iter;
 mod json;
@@ -13,6 +15,7 @@ mod math;
 #[cfg(feature = "net")]
 mod net;
 mod text;
+mod time;
 
 use std::rc::Rc;
 
@@ -29,8 +32,10 @@ pub enum Capability {
     Print,
     /// `eval`: running code built at runtime.
     Eval,
-    /// `random`, `shuffle`, `pick`.
+    /// `random`, `random_float`, `shuffle`, `pick`, `sample`, `uuid`.
     Random,
+    /// `now`: reading the clock.
+    Time,
     /// `get` and `post`: HTTP requests (needs the `net` feature).
     Net,
 }
@@ -111,11 +116,46 @@ impl Library {
         })
     }
 
-    /// The library as a map value (a native module).
+    /// The library as a map value.
     pub fn into_value(self) -> Value {
         let map: Map = self.into_entries().collect();
         Value::map(map)
     }
+
+    /// The library as a module called `name`: its functions call themselves
+    /// `name.f` in error messages and traces (`json.parse`, not `parse`).
+    pub fn into_module(self, name: &str) -> Value {
+        qualify(name, self.into_value())
+    }
+
+    /// Adds `lib` as a nested module value called `name` (see
+    /// [`into_module`](Self::into_module)).
+    pub fn module(&mut self, name: &str, lib: Library) -> &mut Library {
+        self.value(name, lib.into_module(name))
+    }
+}
+
+/// Renames the functions of a native module's map from `f` to `module.f`, so
+/// errors name them unambiguously. Functions stored under a different name than
+/// their own (aliases, script functions) keep it.
+pub(crate) fn qualify(module: &str, exports: Value) -> Value {
+    let Value::Map(map) = exports else {
+        return exports;
+    };
+    let qualified: Map = map
+        .iter()
+        .map(|(key, value)| {
+            let value = match value {
+                Value::Func(f) if *f.name == **key => Value::Func(Rc::new(Function {
+                    name: format!("{module}.{key}").into(),
+                    overloads: f.overloads.clone(),
+                })),
+                other => other.clone(),
+            };
+            (key.clone(), value)
+        })
+        .collect();
+    Value::map(qualified)
 }
 
 /// Builds the prelude for the given capabilities.
@@ -123,11 +163,14 @@ pub(crate) fn prelude(allowed: &dyn Fn(Capability) -> bool) -> Library {
     let mut lib = Library::new();
     core::install(&mut lib);
     iter::install(&mut lib);
+    data::install(&mut lib);
     math::install(&mut lib);
     logic::install(&mut lib);
     text::install(&mut lib);
     func::install(&mut lib);
     json::install(&mut lib);
+    encode::install(&mut lib);
+    time::install(&mut lib);
     if allowed(Capability::Print) {
         core::install_print(&mut lib);
     }
@@ -136,6 +179,9 @@ pub(crate) fn prelude(allowed: &dyn Fn(Capability) -> bool) -> Library {
     }
     if allowed(Capability::Random) {
         math::install_random(&mut lib);
+    }
+    if allowed(Capability::Time) {
+        time::install_time(&mut lib);
     }
     #[cfg(feature = "net")]
     if allowed(Capability::Net) {

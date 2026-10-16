@@ -141,6 +141,8 @@ pub enum Op {
     GetField(u32),
     /// `value[key]`
     GetIndex,
+    /// `value[lo..hi]`: pops `hi`, `lo` (either may be `null`) and the value.
+    Slice,
 
     /// `-x`
     Neg,

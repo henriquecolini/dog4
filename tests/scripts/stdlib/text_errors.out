@@ -1,0 +1,4 @@
+`ord` needs exactly one character, got "ab"
+-1 is not a character code
+the fill must be one character, got "xy"
+can't count empty text

@@ -45,6 +45,8 @@ fn runtime(seed: u64, out: &OutputBuffer) -> Runtime {
     Builder::new()
         .limits(limits)
         .allow(Capability::Net, false)
+        // `now` reads the system clock, which wasm32-unknown-unknown doesn't have.
+        .allow(Capability::Time, false)
         .output(out.clone())
         .provider(modules)
         .seed(seed)

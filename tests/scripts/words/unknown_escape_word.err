@@ -1,0 +1,5 @@
+error: unknown escape `\U`; write `\\` for a backslash, or use a raw string: `"""…"""`
+ --> unknown_escape_word:1:7
+  |
+1 | pln C:\Users;
+  |       ^^

@@ -1,0 +1,2 @@
+// Four quotes in a row can't be inside a raw string opened with three.
+pln """a """" b""";

@@ -1,8 +1,8 @@
 // In expressions, bare identifiers are text unless called.
 x = hello;
-pln $x (type $x) (hello + world) (true) (type null);
+pln $x { type $x } (hello + world) (true) { type null };
 y = hello.world;
 pln $y;
 name = Ana;
 z = Hi_$name;
-pln $z (5px) (type 5px);
+pln $z (5px) { type 5px };

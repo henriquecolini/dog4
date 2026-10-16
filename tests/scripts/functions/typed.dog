@@ -6,7 +6,7 @@ fn flag (b: bool) { put $b }
 pln { flag "" } { flag yes } { flag (0) };
 fn label (s: str) { put "<$s>" }
 pln { label 5 } { label (true) };
-fn maybe (x: num?) { put (type $x) }
+fn maybe (x: num?) { put { type $x } }
 pln { maybe (null) } { maybe 3 };
-fn either (x: str|num) { put (type $x) }
+fn either (x: str|num) { put { type $x } }
 pln { either a } { either 1 };

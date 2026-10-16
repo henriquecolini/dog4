@@ -2,7 +2,7 @@ pln { len "a b c" } { len [1 2] } { len [a = 1] } { len "a,b" , } { len "" , } {
 pln { first "a b c" 2 } { first [1 2 3] 2 } { first "a,b,c" 1 , } { type { first [1] 5 } };
 pln { last "a b c" 2 } { last [1 2 3] 1 } { last "a b" 0 };
 pln { append "a b" "c" } { append [1] [2 3] } { append "x-y" z - };
-pln { range 5 } { range 2 5 } { range 0 10 3 } { range 5 0 -2 } { range 0 10 3 , } { range 0 };
+pln { range 5 } { range 2 5 } { range 0 10 3 } { range 5 0 -2 } { range 0 };
 pln { keys [a = 1, b = 2] } { values [a = 1, b = 2] };
 pln { contains [a b] b } { contains [a b] z } { contains [k = 1] k } { contains "hello" ell };
 pln { join [a b c] } { join [a b c] - } { join [1 [2]] , };

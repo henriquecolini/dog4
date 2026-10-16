@@ -1,0 +1,2 @@
+// `range` always gives an array; the dog3 separator form is gone.
+pln { range 0 10 3 , };

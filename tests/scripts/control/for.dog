@@ -6,5 +6,5 @@ pln (for x in [1 2 3] { put ($x * 10) });
 pln (for i, x in [a b c] { put "$i:$x " });
 m = [one = 1, two = 2];
 pln (for k in $m { put [$k] }) (for k, v in $m { put [$v = $k] });
-pln (for x in (null) { put x }) (for x in null { put [$x] });
-pln (for x in [] { put x }) (type (for x in [] { put x }));
+pln (for x in (null) { put x }) (for x in null { put [$x] }) (for x in "null" { put [$x] });
+pln (for x in [] { put x }) { type (for x in [] { put x }) };

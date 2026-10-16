@@ -1,0 +1,9 @@
+\d+ \s $x ${y} 'q'
+a """ b hello, I have a lot of """"double quotes"""" inside
+x-raw-y str 2
+first
+  indented "quoted"
+
+last $x
+[first "  indented \"quoted\"" "" "last \$x"]
+true a\b

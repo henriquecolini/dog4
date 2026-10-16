@@ -1,0 +1,5 @@
+x = [1 2 3];
+n = { len $x };
+pln $n { len $x } (len($x) + 1) ({ len $x } * 2) (max({ len $x }, 5));
+f = $upper;
+pln { $f hi } $f(hi) (if { contains $x 2 } yes else no);

@@ -2,7 +2,8 @@
 //!
 //! Operators, loosest first: `??`, `||`, `&&`, comparisons (which don't chain),
 //! `..`, `+ -`, `* / %`, then prefix `- !`, then postfix `.f [i] (args)`.
-//! Bare identifiers are strings unless directly followed by `(`.
+//! Bare identifiers are strings unless directly followed by `(`. Commands
+//! (`len $x`) are not expressions: they only run inside blocks, `{ len $x }`.
 
 use super::ast::*;
 use super::parser::{Parser, WordMode, is_ident_char, is_ident_start};
@@ -14,8 +15,8 @@ enum Op {
     Logic(LogicOp),
 }
 
-/// Whether an expression is a plain variable path (`$f`, `$m.f`), which may be
-/// followed by command arguments.
+/// Whether an expression is a plain variable path (`$f`, `$m.f`), which could
+/// be mistaken for a command when arguments follow.
 fn is_path(expr: &Expr) -> bool {
     match &expr.kind {
         ExprKind::Var(_) => true,
@@ -26,6 +27,8 @@ fn is_path(expr: &Expr) -> bool {
 
 /// Binding power of comparisons, which may not chain.
 const COMPARISON: u8 = 4;
+/// Binding power of `..`.
+const RANGE: u8 = 5;
 
 impl Parser<'_> {
     /// Parses one expression.
@@ -36,8 +39,28 @@ impl Parser<'_> {
         result
     }
 
+    /// An operand of `..`: an expression with no operator looser than `+`.
+    pub(super) fn range_operand(&mut self) -> Result<Expr> {
+        self.enter()?;
+        let result = self.binary(RANGE + 1);
+        self.leave();
+        result
+    }
+
+    /// Finishes an expression whose first operand, `lhs`, is already parsed.
+    pub(super) fn expr_from(&mut self, lhs: Expr) -> Result<Expr> {
+        self.enter()?;
+        let result = self.binary_rest(lhs, 0);
+        self.leave();
+        result
+    }
+
     fn binary(&mut self, min_power: u8) -> Result<Expr> {
-        let mut lhs = self.unary()?;
+        let lhs = self.unary()?;
+        self.binary_rest(lhs, min_power)
+    }
+
+    fn binary_rest(&mut self, mut lhs: Expr, min_power: u8) -> Result<Expr> {
         loop {
             let save = self.pos;
             self.skip_trivia()?;
@@ -78,7 +101,7 @@ impl Parser<'_> {
             ("!=", Op::Bin(BinOp::Ne), COMPARISON),
             ("<=", Op::Bin(BinOp::Le), COMPARISON),
             (">=", Op::Bin(BinOp::Ge), COMPARISON),
-            ("..", Op::Bin(BinOp::Range), 5),
+            ("..", Op::Bin(BinOp::Range), RANGE),
         ];
         for (text, op, power) in two {
             if rest.starts_with(text) {
@@ -137,11 +160,8 @@ impl Parser<'_> {
                     expr = Expr::new(ExprKind::Field(Box::new(expr), name), self.span_from(start));
                 }
                 Some('[') => {
-                    let index = self.index()?;
-                    expr = Expr::new(
-                        ExprKind::Index(Box::new(expr), Box::new(index)),
-                        self.span_from(start),
-                    );
+                    let subscript = self.index()?;
+                    expr = self.subscript(expr, subscript, start);
                 }
                 Some('(') => {
                     let args = self.call_args()?;
@@ -163,8 +183,8 @@ impl Parser<'_> {
                     return Err(self.error("a `$%` splat is only allowed as a call argument"));
                 }
                 let word = self.word(WordMode::Expr)?;
-                if is_path(&word) {
-                    return self.embedded_command(word, start);
+                if is_path(&word) && self.command_follows()? {
+                    return Err(self.command_in_expr(start));
                 }
                 Ok(word)
             }
@@ -232,16 +252,7 @@ impl Parser<'_> {
             ));
         }
         if self.command_follows()? {
-            let mut segments = segments.into_iter();
-            let root = segments.next().unwrap_or_else(|| unreachable!());
-            let mut callee = Expr::new(ExprKind::Var(root), self.span_from(start));
-            for name in segments {
-                callee = Expr::new(
-                    ExprKind::Field(Box::new(callee), name),
-                    self.span_from(start),
-                );
-            }
-            return self.embedded_command(callee, start);
+            return Err(self.command_in_expr(start));
         }
         let text = segments.join(".");
         let lit = Expr::new(ExprKind::Lit(Value::str(text)), self.span_from(start));
@@ -249,9 +260,10 @@ impl Parser<'_> {
     }
 
     /// Whether whitespace and then a command argument follow on the same line,
-    /// making the word before it a command: `(len $list)`, `x = upper hello`,
-    /// `(abs -3)`. An operator (`a - b`), a closing bracket or a line break
-    /// means it isn't one (so a forgotten `;` stays a clear error).
+    /// as in `(len $list)` or `x = upper hello`. That's an error (commands only
+    /// run in blocks), reported with a hint. An operator (`a - b`), a closing
+    /// bracket or a line break means it isn't one (so a forgotten `;` stays a
+    /// clear error).
     fn command_follows(&mut self) -> Result<bool> {
         let save = self.pos;
         if !self.peek().is_some_and(char::is_whitespace) {
@@ -277,24 +289,17 @@ impl Parser<'_> {
         Ok(follows)
     }
 
-    /// Parses the arguments of a command written inside an expression. They run
-    /// to the end of the enclosing expression: `)`, `]`, `}`, `;` or `,`.
-    fn embedded_command(&mut self, callee: Expr, start: usize) -> Result<Expr> {
-        if !self.command_follows()? {
-            return Ok(callee);
-        }
-        let mut args = Vec::new();
-        loop {
-            self.skip_trivia()?;
-            match self.peek() {
-                None | Some(')' | ']' | '}' | ';' | ',') => break,
-                _ => args.push(self.arg(WordMode::Embedded)?),
-            }
-        }
-        Ok(Expr::new(
-            ExprKind::Call(Box::new(callee), args),
+    /// The error for a command written where an expression is expected, like
+    /// `(len $list)` or `x = upper hello`: commands only run in blocks.
+    fn command_in_expr(&self, start: usize) -> crate::error::Error {
+        let name = &self.src[start..self.pos];
+        self.error_at(
+            format!(
+                "`{name}` followed by arguments is a command, and commands only run inside \
+                 blocks: write `{{ {name} … }}`, or call it as `{name}(…)`"
+            ),
             self.span_from(start),
-        ))
+        )
     }
 
     /// Glues pieces written directly after an atom: `Hello$name`, `5px`.
@@ -321,9 +326,7 @@ impl Parser<'_> {
             }
         };
         digits(self);
-        let mut float = false;
         if self.peek() == Some('.') && self.peek_nth(1).is_some_and(|c| c.is_ascii_digit()) {
-            float = true;
             self.bump();
             digits(self);
         }
@@ -332,25 +335,14 @@ impl Parser<'_> {
                 || (matches!(self.peek_nth(1), Some('+' | '-'))
                     && self.peek_nth(2).is_some_and(|c| c.is_ascii_digit())))
         {
-            float = true;
             self.bump();
             if matches!(self.peek(), Some('+' | '-')) {
                 self.bump();
             }
             digits(self);
         }
-        let text: String = self.src[start..self.pos]
-            .chars()
-            .filter(|&c| c != '_')
-            .collect();
-        let value = if float {
-            text.parse::<f64>().ok().map(Value::num)
-        } else {
-            text.parse::<i64>()
-                .ok()
-                .map(Value::Int)
-                .or_else(|| text.parse::<f64>().ok().map(Value::num))
-        };
+        let text = &self.src[start..self.pos];
+        let value = crate::value::number_literal(text);
         let span = self.span_from(start);
         match value {
             Some(value) => Ok(Expr::new(ExprKind::Lit(value), span)),

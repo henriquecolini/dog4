@@ -1,0 +1,5 @@
+error: this raw string contains 4 quotes in a row; open and close it with at least 5 quotes
+ --> raw_string_quotes:2:10
+  |
+2 | pln """a """" b""";
+  |          ^^^^

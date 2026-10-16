@@ -53,8 +53,7 @@ pub fn write_repr(value: &Value, out: &mut String, depth: usize) {
         return;
     }
     match value {
-        // A bare `null` inside a literal would read back as the text "null".
-        Value::Null => out.push_str("(null)"),
+        Value::Null => out.push_str("null"),
         Value::Bool(b) => out.push_str(if *b { "true" } else { "false" }),
         Value::Int(i) => {
             let _ = write!(out, "{i}");
@@ -119,9 +118,9 @@ fn is_plain_word(s: &str) -> bool {
 }
 
 /// Whether a string can be written without quotes and still read back as the
-/// same string (not as a number, a bool, or the confusing word `null`).
+/// same string (not as a number, a bool or `null`).
 fn reads_back_bare(s: &str) -> bool {
-    is_plain_word(s) && bare_literal(s).is_none() && s != "null"
+    is_plain_word(s) && bare_literal(s).is_none()
 }
 
 /// Writes `s` as a dog4 double-quoted string.

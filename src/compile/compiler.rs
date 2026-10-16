@@ -963,6 +963,18 @@ impl Compiler<'_> {
                 self.expr(index)?;
                 self.emit(Op::GetIndex);
             }
+            ExprKind::Slice(base, lo, hi) => {
+                self.expr(base)?;
+                for bound in [lo, hi] {
+                    match bound {
+                        Some(bound) => self.expr(bound)?,
+                        None => {
+                            self.emit(Op::Null);
+                        }
+                    }
+                }
+                self.emit(Op::Slice);
+            }
             ExprKind::Glue(parts) => {
                 for part in parts {
                     self.expr(part)?;

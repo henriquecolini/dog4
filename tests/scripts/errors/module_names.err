@@ -1,0 +1,5 @@
+error: `json.parse` expects a str for `text`, got null
+ --> module_names:2:1
+  |
+2 | json.parse (null);
+  | ^^^^^^^^^^^^^^^^^

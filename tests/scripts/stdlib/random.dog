@@ -1,7 +1,7 @@
 // Runs with a fixed seed, so this is deterministic.
 r = { random 10 };
-pln ($r >= 0 && $r < 10) (type $r);
+pln ($r >= 0 && $r < 10) { type $r };
 s = { random 5 8 };
 pln ($s >= 5 && $s < 8);
 pln { len { shuffle [1 2 3 4] } } { sort { shuffle [3 1 2] } } ({ pick [only] });
-pln (type { pick [] });
+pln { type { pick [] } };

@@ -1,0 +1,5 @@
+error: no overload of `range` takes 4 arguments; it has fn range(max: num), fn range(min: num, max: num), fn range(min: num, max: num, step: num)
+ --> range_text:2:7
+  |
+2 | pln { range 0 10 3 , };
+  |       ^^^^^^^^^^^^^^^

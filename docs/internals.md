@@ -29,11 +29,16 @@ simply which function is running:
   `{`, `$`, or a name followed by an assignment operator).
 * `value(mode)` reads one command-mode value: a block, literal, `( expr )`,
   control form, lambda, or `word`.
-* `word(mode)` collects pieces (text, quotes, `$` forms) until a word
-  boundary; several pieces become `ExprKind::Glue`. A plain word that reads as
-  a number or bool becomes a literal (`bare_literal`).
+* `word(mode)` collects pieces (text, quotes, raw strings, escapes, `$` forms)
+  until a word boundary; several pieces become `ExprKind::Glue`. A plain word
+  that is a literal (a number, `true`, `false`, `null`) becomes one
+  (`bare_literal`; numbers share `number_literal` with expression mode).
 * `expr` is a Pratt parser. Bare identifiers are strings unless followed by
-  `(` (a call) or, on the same line, by an argument (an embedded command).
+  `(` (a call). A name followed by arguments on the same line is a command,
+  which is only allowed in blocks, so it's reported with a hint
+  (`command_in_expr`).
+* `index` reads `[…]` after a value: an index, or a slice `[a..b]` whose bounds
+  are parsed tighter than `..` (`range_operand`) before deciding which it is.
 
 Every node carries a byte `Span`; nesting depth is bounded by
 `Limits::max_nesting` so hostile input can't overflow the stack.

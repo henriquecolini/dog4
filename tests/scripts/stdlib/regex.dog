@@ -1,0 +1,9 @@
+pln { replace "a-b-c" - + } { replace "2024-06-01" """(\d+)-(\d+)-(\d+)""" '$3/$2/$1' };
+pln { replace "John Smith" """(?P<first>\w+) (?P<last>\w+)""" '${last}, $first' } { replace "cost" t '$$' };
+pln { replace abc "" - } { replace "a.b.c" { regex_escape . } "" } { replace "" x y };
+pln { captures "id: 42, id: 7" """id: (\d+)""" } { type { captures abc """\d""" } };
+pln { captures "ab" """(a)(x)?(b)""" };
+pln { captures_all "a=1 b=2" """(\w)=(\d)""" } { captures_all abc """\d""" };
+pln { find_all "1 fish 2 fish 30 fish" """\d+""" } { find_all "" x };
+pln { split_re "a, b;c" """[,;]\s*""" } { split_re "" "," } { split_re abc "" };
+pln { regex_escape "1+1=2?" } { matches "1+1=2?" { regex_escape "+1=" } };

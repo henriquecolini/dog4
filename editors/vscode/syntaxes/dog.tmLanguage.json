@@ -17,6 +17,9 @@
           "include": "#comment-line"
         },
         {
+          "include": "#string-raw"
+        },
+        {
           "include": "#string-double"
         },
         {
@@ -66,6 +69,12 @@
           "include": "#comment-block"
         }
       ]
+    },
+    "string-raw": {
+      "comment": "Three or more quotes open a raw string; the same number close it. No escapes or interpolation.",
+      "name": "string.quoted.triple.dog",
+      "begin": "(\"{3,})",
+      "end": "\\1"
     },
     "string-double": {
       "comment": "Double quotes interpolate; single quotes do not.",
@@ -258,7 +267,7 @@
     },
     "number": {
       "name": "constant.numeric.dog",
-      "match": "(?<![^\\s;{}()\\[\\],=])-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?(?![^\\s;{}()\\[\\],=])"
+      "match": "(?<![^\\s;{}()\\[\\],=])-?\\d[\\d_]*(\\.\\d[\\d_]*)?([eE][+-]?\\d[\\d_]*)?(?![^\\s;{}()\\[\\],=])"
     },
     "operator": {
       "name": "keyword.operator.dog",

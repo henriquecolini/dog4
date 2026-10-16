@@ -101,6 +101,7 @@ fn run(file: &Path) -> Result<(String, bool), Failed> {
             "print" => Capability::Print,
             "eval" => Capability::Eval,
             "random" => Capability::Random,
+            "time" => Capability::Time,
             "net" => Capability::Net,
             other => return Err(format!("unknown capability `{other}`").into()),
         };

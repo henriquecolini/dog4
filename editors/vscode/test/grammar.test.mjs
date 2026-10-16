@@ -129,6 +129,15 @@ test("single quoted strings do not interpolate", () => {
   }
 });
 
+test("raw strings hold quotes and don't interpolate", () => {
+  const raw = tokenize('pln """"say """hi""" $x"""" after;');
+  const inside = raw.filter((t) => t.scopes.join(" ").includes("string.quoted.triple"));
+  assert.equal(inside.map((t) => t.text).join(""), '""""say """hi""" $x""""');
+  assert.ok(inside.every((t) => !t.scopes.join(" ").includes("variable.other")));
+  const after = raw.find((t) => t.text.includes("after"));
+  assert.ok(after && !after.scopes.join(" ").includes("string"), "the raw string didn't end");
+});
+
 test("numbers are numeric", () => {
   assert.match(scopesOf("8080"), /constant\.numeric/);
   assert.match(scopesOf("2.5"), /constant\.numeric/);

@@ -4,4 +4,4 @@ fn first_big (xs: arr) {
 }
 pln { first_big [1 20 30] } { first_big [1 2] };
 fn early () { return }
-pln (type { early });
+pln { type { early } };

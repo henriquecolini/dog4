@@ -1,0 +1,5 @@
+error: can't slice a map; only arrays and strings can be sliced
+ --> slice_map:2:5
+  |
+2 | pln $m[0..1];
+  |     ^^^^^^^^

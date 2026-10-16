@@ -1,0 +1,10 @@
+1970-01-01T00:00:00Z Tue 14 Nov 2023 22:13:20.500 UTC 318 2 2 %
+1969-12-31T23:59:59Z 2000-02-29 Thursday 29 February 24, 11:45 AM (1709207100)
+1704067200 1704067200 1704088800 1704063600.5
+1709207100 925747620 1700000000
+[year = 2024, month = 2, day = 29, hour = 11, minute = 45, second = 0, millis = 0, weekday = 4, yday = 60]
+2025-01-01T00:00:00Z 366
+"2023-02-29" is not a valid date
+"2024-01-01 junk" doesn't match the date format at "junk"
+unknown date format `%Q`
+100000000000000000000 is not a timestamp between the years -9999 and 9999

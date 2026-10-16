@@ -1,0 +1,5 @@
+error: slice bounds are whole numbers, not str "a"
+ --> slice_bound:1:5
+  |
+1 | pln [1 2 3][a..];
+  |     ^^^^^^^^^^^^

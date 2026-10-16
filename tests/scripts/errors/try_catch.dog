@@ -2,7 +2,7 @@ pln (try { put (1 + [k = v]) } catch e { put "$e.kind: $e.message" });
 pln (try { throw [code = 7] } catch e { put $e.value.code $e.kind });
 pln (try { fail bad thing } catch e { put $e.message });
 pln (try { put fine } catch e { put never });
-pln (type (try { throw x }));
+pln { type (try { throw x }) };
 pln (try { try { throw inner } catch e { throw "re-$e.value" } } catch e { put $e.value });
 r = try { map [1 2] fn (x) { if ($x == 2) { throw "boom at $x" }; put $x } } catch e { put $e.message };
 pln $r;

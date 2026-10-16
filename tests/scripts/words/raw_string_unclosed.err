@@ -1,0 +1,5 @@
+error: unclosed raw string
+ --> raw_string_unclosed:1:5
+  |
+1 | pln """never closed;
+  |     ^^^

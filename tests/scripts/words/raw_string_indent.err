@@ -1,0 +1,5 @@
+error: this line is indented less than the raw string's closing quotes
+ --> raw_string_indent:3:1
+  |
+3 |     not fine
+  | ^^^^^^^^^^^^

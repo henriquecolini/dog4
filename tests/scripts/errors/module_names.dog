@@ -1,0 +1,2 @@
+// Errors name module functions by their path, not their leaf.
+json.parse (null);

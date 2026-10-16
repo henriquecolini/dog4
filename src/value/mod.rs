@@ -20,7 +20,7 @@ use rustc_hash::FxBuildHasher;
 pub use display::{fmt_num, write_quoted, write_repr};
 pub use json::{from_json, parse_json, to_json};
 pub use ops::*;
-pub use types::{Type, bare_literal, can_coerce, coerce, parse_num, with_article};
+pub use types::{Type, bare_literal, can_coerce, coerce, number_literal, parse_num, with_article};
 
 use crate::vm::{Function, RefData};
 

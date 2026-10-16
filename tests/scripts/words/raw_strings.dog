@@ -1,0 +1,14 @@
+// Raw strings: no escapes, no interpolation, any shorter run of quotes inside.
+pln """\d+ \s $x ${y} 'q'""";
+pln """"a """ b"""" """"""hello, I have a lot of """"double quotes"""" inside"""""";
+pln x"""-raw-"""y { type """5""" } { strlen """\n""" };
+// Multi-line: the closing quotes' indentation is removed from every line.
+text = """
+    first
+      indented "quoted"
+
+    last $x
+    """;
+pln $text;
+pln { lines $text };
+pln { matches "a1" """^\w\d$""" } { replace "a.b" """\.""" """\""" };

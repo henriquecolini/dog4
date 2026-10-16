@@ -1,5 +1,5 @@
 l = [a b c];
-pln $l (type $l) { len $l };
+pln $l { type $l } { len $l };
 pln [] [1, 2, 3] [1 2 (1 + 2)] ["x y" z];
 pln $l[0] $l[2] $l[-1] $l[5] $l.1;
 i = 1;

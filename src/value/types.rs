@@ -119,21 +119,67 @@ pub fn with_article(noun: &str) -> String {
     }
 }
 
-/// A bare word that reads exactly like a number or a bool *is* one: `5`, `-2.5`,
-/// `true`. The rule is lossless — the value prints back as the same text — so
-/// `007`, `1.50` and `1e3` stay text.
+/// A bare word that is a literal *is* that value: `5`, `-2.5`, `007`, `1e3`,
+/// `1_000`, `true`, `false` and `null`. Numbers are written as in expressions
+/// (see [`number_literal`]); anything else, such as `+5`, `5px` or `inf`, is text.
 pub fn bare_literal(text: &str) -> Option<Value> {
     match text {
-        "true" => return Some(Value::Bool(true)),
-        "false" => return Some(Value::Bool(false)),
-        _ => {}
+        "true" => Some(Value::Bool(true)),
+        "false" => Some(Value::Bool(false)),
+        "null" => Some(Value::Null),
+        _ => number_literal(text),
     }
-    let digits = text.strip_prefix('-').unwrap_or(text);
-    if !digits.starts_with(|c: char| c.is_ascii_digit()) {
+}
+
+/// Parses a number literal: an optional `-`, digits (with `_` separators allowed
+/// after the first), an optional fraction `.digits` and an optional exponent
+/// `e[+-]digits`. The whole text must be the literal.
+pub fn number_literal(text: &str) -> Option<Value> {
+    let (negative, body) = match text.strip_prefix('-') {
+        Some(rest) => (true, rest),
+        None => (false, text),
+    };
+    let bytes = body.as_bytes();
+    if !bytes.first().is_some_and(u8::is_ascii_digit) {
         return None;
     }
-    let value = parse_num(text)?;
-    (value.to_string() == text).then_some(value)
+    let digits = |mut i: usize| {
+        while i < bytes.len() && (bytes[i].is_ascii_digit() || bytes[i] == b'_') {
+            i += 1;
+        }
+        i
+    };
+    let is_digit = |i: usize| bytes.get(i).is_some_and(u8::is_ascii_digit);
+    let mut i = digits(0);
+    let mut float = false;
+    if bytes.get(i) == Some(&b'.') && is_digit(i + 1) {
+        float = true;
+        i = digits(i + 1);
+    }
+    if matches!(bytes.get(i), Some(b'e' | b'E'))
+        && (is_digit(i + 1) || (matches!(bytes.get(i + 1), Some(b'+' | b'-')) && is_digit(i + 2)))
+    {
+        float = true;
+        i = digits(i + 2);
+    }
+    if i != bytes.len() {
+        return None;
+    }
+    let clean: String = body.chars().filter(|&c| c != '_').collect();
+    let value = if float {
+        Value::num(clean.parse::<f64>().ok()?)
+    } else {
+        match clean.parse::<i64>() {
+            Ok(i) => Value::Int(i),
+            Err(_) => Value::num(clean.parse::<f64>().ok()?),
+        }
+    };
+    Some(match (negative, value) {
+        (false, value) => value,
+        (true, Value::Int(i)) => i.checked_neg().map_or(Value::num(-(i as f64)), Value::Int),
+        (true, Value::Float(f)) => Value::num(-f),
+        (true, other) => other,
+    })
 }
 
 /// Parses text as a number the way typed `num` parameters do.

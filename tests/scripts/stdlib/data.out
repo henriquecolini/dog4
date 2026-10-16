@@ -1,0 +1,9 @@
+[x a b c] [a b c x] [a b x c] [b c] [a b] [a b c]
+[1 2 3 [4] 5] [1 2 "1" a [1]] []
+[[a 1] [b 2]] [] [[1 2] [3 4] [5]] []
+[name = Ana, admin = true] [name = Ana] true false [name = Ana, age = 30, admin = true]
+[[name Ana] [age 30] [admin true]] [name = Ana, age = 30, admin = true] [=] []
+can't insert at index 5 of an array of 3
+can't remove at index 0 of an array of 0
+a chunk size must be positive, not 0
+`from_entries` needs [key value] pairs, got one of 1 items

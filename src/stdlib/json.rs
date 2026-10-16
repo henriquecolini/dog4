@@ -16,7 +16,7 @@ pub(super) fn install(lib: &mut Library) {
         let json = to_json(&args[0])?;
         checked_str(vm, serde_json::to_string_pretty(&json).unwrap_or_default())
     });
-    lib.value("json", json.into_value());
+    lib.module("json", json);
     // A flattened, grep-able listing of a JSON document (keys sorted, like gron).
     lib.def("gron", "input: str", |vm, args| {
         let Ok(value) = parse_json(text(&args[0])) else {

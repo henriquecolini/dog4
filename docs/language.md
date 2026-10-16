@@ -58,13 +58,40 @@ A word is made of pieces:
 | piece | meaning |
 |---|---|
 | plain characters | text; `,` `=` `'` `:` `+` … are ordinary characters |
-| `\c` | the character `c` (`\n` `\t` `\r` `\0` are control characters) |
+| `\c` | an escape (below) |
 | `"…"` | text with escapes and interpolation (always text) |
 | `'…'` | text with escapes but no interpolation (only at the start of a word; elsewhere `'` is a plain apostrophe) |
+| `"""…"""` | a raw string (below): text with no escapes and no interpolation |
 | `$name`, `$name.field`, `$name[expr]`, `$name.0` | a variable and a path into it |
 | `${name}` | a variable, with no path |
 | `$(expr)` | an expression |
 | `$f(args)` | a call (not inside `"…"`) |
+
+**Escapes** work the same in words, `"…"` and `'…'`: `\n` `\t` `\r` `\0` are
+control characters, and a backslash before ASCII punctuation or whitespace
+(`\$` `\"` `\\` `\;` `\ ` …) gives that character. Any other escape, such as
+`\d`, `\s` or `\5`, is a syntax error.
+
+**Raw strings** start with three or more `"` and end at the next run of exactly
+as many; a longer run inside is an error. Everything in between is literal
+text, so a raw string can hold any run of quotes shorter than its delimiters.
+If a raw string spans several lines, its opening quotes must end their line and
+its closing quotes must be alone on theirs; the text is the lines in between,
+minus the closing quotes' indentation (like C#):
+
+```dog
+pln """\d+\s$x""" """"say """hi"""!"""";
+x = """
+    first
+      second "quoted"
+    """;
+pln $x
+```
+```text
+\d+\s$x say """hi"""!
+first
+  second "quoted"
+```
 
 Variable names are letters (any script), ASCII digits and `_`, not starting
 with a digit. So in `"$x!"` the variable is `x`; in `"$file.txt"` it is a path
@@ -81,10 +108,11 @@ pln user_$id $x$x "$x$x" $x"!" got:$l
 user_42 10 55 5! [got: a]
 ```
 
-**Bare literals.** A word of plain characters that reads exactly like a number
-or a boolean is that value: the text must be what the value prints as. So
-`5`, `-2.5`, `true` are typed, while `007`, `1.50`, `1e3`, `+5` and `null`
-stay text.
+**Bare literals.** A word of plain characters that is a literal is that value:
+`true`, `false`, `null`, and numbers written as in expressions (§6), with an
+optional leading `-`: `5`, `-2.5`, `007` (7), `1.50`, `1e3`, `1_000`. Anything
+else is text: `+5`, `5px`, `inf`, `1.`. Quoting (`"5"`, `'null'`) or escaping
+always gives text.
 
 Two special argument forms exist only in calls:
 
@@ -115,15 +143,15 @@ everything else is truthy.
 is and `null` prints nothing. Arrays and maps print as **dog4 literals**, so
 what a program prints can be pasted back into a program: strings are quoted
 only when they must be (spaces, special characters, text that would read as a
-number or bool), and a nested `null` prints as `(null)`, infinities and `NaN` as
-`(1 / 0)`, `(-1 / 0)` and `(0 / 0)`. Only functions, printed as `<fn name>`,
-have no literal form. Use `json.encode` for JSON.
+number, a bool or `null`), and infinities and `NaN` print as `(1 / 0)`,
+`(-1 / 0)` and `(0 / 0)`. Only functions, printed as `<fn name>`, have no
+literal form. Use `json.encode` for JSON.
 
 ```dog
-pln "a" [1 "two" (null) [k = v]] (null) $pln
+pln "a" [1 "two" null "null" [k = v]] (null) $pln
 ```
 ```text
-a [1 two (null) [k = v]]  <fn pln>
+a [1 two null "null" [k = v]]  <fn pln>
 ```
 
 ## 4. The fold (`+`)
@@ -167,14 +195,16 @@ Inside brackets, words also end at `,` and `=`.
 Inside `( … )`, after `=` (and `+=` …), after `return`/`clear`/`break`/`throw`,
 and in call arguments `f(…)`, dog4 reads **expressions**:
 
-* numbers `12`, `2.5`, `1e3`, `1_000`; strings `"…"`, `'…'`; `true` `false` `null`
+* numbers `12`, `2.5`, `1e3`, `1_000`; strings `"…"`, `'…'`, `"""…"""`;
+  `true` `false` `null`
 * `$variables` with paths, blocks, literals, nested `( … )`
-* a bare identifier is a **string** (`x = hello` → `"hello"`), unless:
-  * it is directly followed by `(`: a call, `max(1, 2)`, `json.encode($v)`;
-  * it is followed, on the same line, by an argument: a command,
-    `(len $list)`, `x = upper hello` (the arguments run to the end of the
-    expression; a `-` directly followed by text, as in `abs -3`, is an argument);
+* a bare identifier is a **string** (`x = hello` → `"hello"`), unless it is
+  directly followed by `(`: then it's a call, `max(1, 2)`, `json.encode($v)`
 * `fn (…) { … }` lambdas, `if`/`while`/`for`/`try` forms, `mod name`, `mod { … }`.
+
+**Commands are not expressions.** A command with arguments only runs inside a
+block: write `{ len $list }` or `len($list)`. A name followed by arguments in
+an expression, as in `(len $list)` or `x = upper hello`, is a syntax error.
 
 Operators, from loosest to tightest:
 
@@ -188,7 +218,7 @@ Operators, from loosest to tightest:
 | `+ -` | `+` is the fold |
 | `* / %` | `*` also repeats strings and arrays; `/` keeps whole results whole; `%` takes the sign of the divisor |
 | `-x !x` | negation, logical not |
-| `x.f x[i] x(args)` | written without spaces |
+| `x.f x[i] x[a..b] x(args)` | written without spaces; see slices below |
 
 ```dog
 x = 7;
@@ -198,6 +228,22 @@ pln (0 || "") (null ?? 0) ([a b] == [a b]) (1 == 1.0) ("1" == 1)
 ```text
 7 3.5 2 2 ababab [1 2 3] true
  0 true true false
+```
+
+**Slices.** `x[a..b]` is a copy of the items of an array, or the characters of
+a string, from index `a` up to, not including, `b`. Either bound can be left
+out (`x[a..]`, `x[..b]`, `x[..]`); negative bounds count from the end, and
+bounds past either end are clamped, so a slice never fails for being out of
+range. Slicing `null` gives `null`. A slice can't be assigned to or passed as
+a reference.
+
+```dog
+a = [0 1 2 3 4 5];
+s = "héllo wörld";
+pln $a[1..3] $a[..2] $a[4..] $a[-2..] $a[3..1] "<$s[1..4]>" $s[-5..]
+```
+```text
+[1 2] [0 1] [4 5] [4 5] [] <éll> wörld
 ```
 
 ## 7. Control flow
@@ -405,7 +451,11 @@ report the location and the chain of calls.
 
 Builtins declare typed parameters like any function, so they convert their
 arguments the same way. "Sequences" accept arrays, or text split into words
-(giving text back), like in dog3.
+(giving text back), like in dog3. Builtins never change their arguments: they
+return new values, so write `list = { insert $list 0 x }`. Functions in a
+module (`json.parse`) are named that way in error messages.
+
+**Core**
 
 | builtin | does |
 |---|---|
@@ -414,51 +464,196 @@ arguments the same way. "Sequences" accept arrays, or text split into words
 | `print %args`, `println %args` | write immediately (capability `print`) |
 | `type value` | `"null"`, `"bool"`, `"num"`, `"str"`, `"arr"`, `"map"` or `"fn"` |
 | `num v`, `str v`, `bool v`, `arr v` | convert (as typed parameters do) |
-| `len items [sep]` | length of an array or map, or number of words in text |
-| `first items n [sep]`, `last items n [sep]` | first/last `n` items (`null` if there are fewer) |
-| `append a b [sep]` | two arrays or texts joined |
-| `range max`, `range min max [step [sep]]` | whole numbers (a text when `sep` is given) |
-| `keys map`, `values map` | arrays of a map's keys / values |
-| `contains haystack needle` | array element, map key or substring |
-| `join items [sep]`, `split text [sep]`, `chars text` | text ⇄ arrays |
-| `reverse items`, `sort items`, `sum items`, `index_of items needle` | |
-| `add sub mul div max min first %rest` | dog3 arithmetic over all arguments |
-| `floor ceil round abs sqrt x`, `pow base exp` | |
-| `random max`, `random min max`, `shuffle items`, `pick items` | capability `random` |
-| `eq neq lt gt leq geq a b` | numeric comparisons (convert text) |
-| `like a b` | same text? |
-| `and a b`, `or a b`, `not a`, `true`, `false` | booleans by truthiness |
-| `upper lower %args`, `trim text`, `strlen text` | |
-| `replace target from to`, `starts_with`, `ends_with` | |
-| `search text pattern` | the lines matching a regular expression |
-| `matches text pattern` | does the regex match? |
-| `is_alpha %args`, `is_alphanumeric %args` | |
-| `map items f`, `filter items f`, `each items f`, `reduce items init f`, `sort_by items f` | |
-| `json.parse text`, `json.encode v`, `json.pretty v` | |
-| `gron json` | flattened, grep-able listing of a JSON document |
 | `src function` | source code |
 | `eval code` | runs code in the current module (capability `eval`) |
 | `fail %message`, `assert cond [%message]` | raise errors |
-| `get url [timeout]`, `post url [body [timeout]]` | HTTP (capability `net`); `timeout` is in seconds (default 10, 1–60), cut short by the run's time limit |
+
+**Sequences, arrays and maps**
+
+| builtin | does |
+|---|---|
+| `len items [sep]` | length of an array or map, or number of words in text |
+| `first items n [sep]`, `last items n [sep]` | first/last `n` items (`null` if there are fewer) |
+| `append a b [sep]` | two arrays or texts joined |
+| `range max`, `range min max [step]` | an array of whole numbers |
+| `contains haystack needle` | array element, map key or substring |
+| `count haystack needle` | how many times an element (array) or substring (text) occurs |
+| `index_of items needle`, `last_index_of items needle` | position of the first/last occurrence, or `null` |
+| `join items [sep]`, `split text [sep]`, `chars text` | text ⇄ arrays |
+| `reverse items`, `sort items`, `sum items` | |
+| `insert items i v`, `remove_at items i` | the array with `v` inserted at / the item removed from index `i` (negative counts from the end) |
+| `flatten items`, `unique items` | one level of nesting removed / repeats removed (the first is kept) |
+| `zip a b`, `chunk items n` | `[[a0 b0] [a1 b1] …]` (as long as the shorter) / arrays of `n` items |
+| `keys map`, `values map`, `entries map`, `from_entries pairs` | a map's keys, values, or `[key value]` pairs, and back |
+| `has map key`, `remove map %keys` | is the key there? / the map without those keys |
+
+**Callbacks**
+
+| builtin | does |
+|---|---|
+| `map items f`, `filter items f`, `each items f`, `reduce items init f` | |
+| `sort_by items f`, `min_by items f`, `max_by items f` | by the key `f` gives each item |
+| `any items f`, `all items f` | does `f` hold for some / every item? |
+| `find items f`, `find_index items f` | the first item for which `f` holds, or its index (`null` if none) |
+| `flat_map items f` | `map`, then the resulting arrays concatenated |
+| `group_by items f`, `count_by items f` | a map from each key (as text) to the items with it / to how many |
 
 ```dog
-pln { first "a b c" 2 } { first [1 2 3] 2 } { len "a b c" } { range 3 } { join [x y] - };
-pln { sort [3 1 2] } { sum [1 2 3] } { upper hi } { replace a-b - + } { json.encode [a = [1]] };
-put { gron '{"a": [1, {"b": true}]}' }
+nums = [3 1 4 1 5 9 2 6];
+pln { insert [a c] 1 b } { remove_at [a b c] -1 } { flatten [[1 2] [3] 4] } { unique $nums };
+pln { zip [a b c] [1 2] } { chunk $nums 3 } { count $nums 1 } { count "banana" an };
+user = [name = Ana, age = 30, admin = true];
+pln { remove $user age admin } { has $user age } { entries [a = 1] } { from_entries [[x 1]] };
+pln { any $nums fn (n) ($n > 8) } { all $nums fn (n) ($n > 0) } { find $nums fn (n) ($n > 4) };
+pln { group_by $nums fn (n) if ($n % 2 == 0) even else odd } { max_by [ab c def] fn (w) { strlen $w } }
 ```
 ```text
-a b [1 2] 3 [0 1 2] x-y
-[1 2 3] 6 HI a+b {"a":[1]}
-json = {}
-json.a = []
-json.a[0] = 1
-json.a[1] = {}
-json.a[1].b = true
+[a b c] [a b] [1 2 3 4] [3 1 4 5 9 2 6]
+[[a 1] [b 2]] [[3 1 4] [1 5 9] [2 6]] 2 2
+[name = Ana] true [[a 1]] [x = 1]
+true true 5
+[odd = [3 1 1 5 9], even = [4 2 6]] def
+```
+
+**Numbers**
+
+| builtin | does |
+|---|---|
+| `add sub mul div max min first %rest` | dog3 arithmetic over all arguments |
+| `floor ceil trunc abs sign sqrt exp ln x`, `round x [digits]`, `pow base exp`, `clamp x min max` | |
+| `log x [base]` | logarithm, base 10 by default |
+| `sin cos tan asin acos atan x`, `atan2 y x`, `pi` | radians |
+| `fixed x digits` | text with exactly `digits` decimals |
+| `parse_int text base`, `to_base n base` | whole numbers in bases 2 to 36 |
+| `product items`, `avg items`, `median items` | over an array of numbers (`avg` and `median` of `[]` are `null`) |
+| `random max`, `random min max`, `random_float [min max]` | capability `random` |
+| `shuffle items`, `pick items`, `sample items n`, `uuid` | capability `random` |
+| `eq neq lt gt leq geq a b` | numeric comparisons (convert text) |
+| `like a b` | same text? |
+| `and a b`, `or a b`, `not a`, `true`, `false` | booleans by truthiness |
+
+```dog
+pln { round 3.14159 2 } { fixed 2 3 } { clamp 15 0 10 } { sign -4 } { log 1000 } { round { pi } 4 };
+pln { parse_int ff 16 } { to_base 255 2 } { avg [1 2 3 4] } { median [5 1 3] } { product [2 3 4] }
+```
+```text
+3.14 2.000 10 -1 3 3.1416
+255 11111111 2.5 3 24
+```
+
+**Text**
+
+| builtin | does |
+|---|---|
+| `upper lower %args`, `capitalize text` | |
+| `trim text`, `trim_start text`, `trim_end text` | |
+| `pad_left text width [fill]`, `pad_right text width [fill]` | widen to `width` characters with `fill` (a space by default) |
+| `strlen text`, `lines text` | number of characters / an array of lines |
+| `starts_with text prefix`, `ends_with text suffix` | |
+| `ord char`, `chr code` | Unicode code points |
+| `is_alpha is_alphanumeric is_digit is_space %args` | do all the characters qualify? |
+
+**Regular expressions** use the syntax of Rust's `regex` crate. Raw strings
+keep their backslashes: `"""\d+"""`.
+
+| builtin | does |
+|---|---|
+| `matches text pattern` | does the regex match? |
+| `search text pattern` | the lines matching, each with its newline |
+| `replace text pattern to` | every match replaced; in `to`, `$1` or `${name}` is a group and `$$` is `$` |
+| `find_all text pattern` | an array of every match |
+| `captures text pattern` | the first match's groups, `[whole first second …]` (`null` for a group that didn't match), or `null` |
+| `captures_all text pattern` | the groups of every match |
+| `split_re text pattern` | text split at every match |
+| `regex_escape text` | `text` with regex syntax escaped, to match it literally |
+
+```dog
+pln { replace "2024-06-01" """(\d+)-(\d+)-(\d+)""" '$3/$2/$1' } { replace "a.b.c" { regex_escape . } - };
+pln { captures "id: 42, id: 7" """id: (\d+)""" } { captures_all "a=1 b=2" """(\w)=(\d)""" };
+pln { find_all "1 fish 2 fish" """\d+""" } { split_re "a, b;c" """[,;]\s*""" } { pad_left 7 3 0 } { capitalize élan }
+```
+```text
+01/06/2024 a-b-c
+["id: 42" "42"] [["a=1" a "1"] ["b=2" b "2"]]
+["1" "2"] [a b c] 007 Élan
+```
+
+**Data formats and encodings**
+
+| builtin | does |
+|---|---|
+| `json.parse text`, `json.encode v`, `json.pretty v` | |
+| `gron json` | flattened, grep-able listing of a JSON document |
+| `url.encode text`, `url.decode text` | percent-encoding (everything but `A-Z a-z 0-9 - . _ ~` is encoded) |
+| `url.query map` | `a=1&b=2`; an array value repeats its key, `null` values are left out |
+| `url.parse url` | `[scheme user password host port path query fragment]`, with `query` a map |
+| `base64.encode text`, `base64.decode text` | standard base64; decoding also takes the URL-safe alphabet and missing padding |
+| `hex.encode text`, `hex.decode text` | |
+| `sha256 text`, `hmac_sha256 key text` | hex digests |
+
+Decoding to bytes that aren't UTF-8 text is an error.
+
+```dog
+pln { url.query [q = "dog 4", tag = [a b]] } { url.decode "caf%C3%A9" } { base64.encode hi } { hex.encode hi };
+pln { url.parse "https://example.com:8080/a?x=1#top" };
+pln { sha256 abc }
+```
+```text
+q=dog%204&tag=a&tag=b café aGk= 6869
+[scheme = https, user = null, password = null, host = example.com, port = 8080, path = /a, query = [x = "1"], fragment = top]
+ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
+```
+
+**Dates.** Timestamps are Unix seconds, and dates are in UTC. Formats use
+`%Y %y %m %d %e %H %I %p %M %S %f` (milliseconds) `%j %a %A %b %B %u %w %F %T
+%s %z %Z %%`; parsing reads the same directives.
+
+| builtin | does |
+|---|---|
+| `now` | the current time (capability `time`) |
+| `date.format ts [format]` | text; ISO 8601 (`2024-06-01T12:00:00Z`) by default |
+| `date.parse text [format]` | a timestamp; ISO 8601 / RFC 3339 by default, with an optional offset |
+| `date.parts ts` | `[year month day hour minute second millis weekday yday]` (`weekday` 1 is Monday) |
+
+```dog
+t = { date.parse "2024-02-29T13:45:00+02:00" };
+pln $t { date.format $t } { date.format $t "%a %d %b %Y, %I:%M %p" } { date.parts $t }.weekday
+```
+```text
+1709207100 2024-02-29T11:45:00Z Thu 29 Feb 2024, 11:45 AM 4
+```
+
+**HTTP** (capability `net`)
+
+| builtin | does |
+|---|---|
+| `get url [options]`, `post url [body [options]]` | the response body; a status outside 200–299 is an error |
+| `fetch url [options]` | the whole response, `[status ok url headers body]`, whatever its status |
+
+The options are a map: `method` (`GET`, or `POST` when there is a body),
+`headers` (a map), `query` (a map added to the URL, as by `url.query`), `body`,
+`form` (a map sent as `application/x-www-form-urlencoded`), `timeout` (seconds,
+1–60, default 10; also cut short by the run's time limit) and `redirects`
+(`false`, or how many to follow; default 10). A body that isn't text is sent as
+JSON with `Content-Type: application/json`, unless the headers set another.
+Response header names are lowercase. `get` and `post` also accept a timeout
+number in place of the options, as in dog3.
+
+```dog ignore
+r = { fetch https://api.example.com/items [
+    method = PUT,
+    headers = [Authorization = "Bearer $token"],
+    query = [page = 2],
+    body = [name = Ana, tags = [a b]],
+] };
+if (!$r.ok) { fail "got $r.status" };
+items = json.parse($r.body);
+pln $r.headers["content-type"]
 ```
 
 ## 13. Limits
 
 A host can limit fuel (work), time, call depth, callback depth, string size,
 array/map size, printed output and source nesting; and it can withhold the
-`print`, `eval`, `random` and `net` capabilities. Hitting a limit is an error of
+`print`, `eval`, `random`, `time` and `net` capabilities. Hitting a limit is an error of
 kind `limit` that `try` can't catch. See [embedding.md](embedding.md).

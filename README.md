@@ -68,15 +68,28 @@ Escape   those   spaces!
 I'm fine, thanks. a=b 1+1 https://example.com
 ```
 
-One twist: a bare word that reads *exactly* like a number or a boolean **is**
-one. The rule is lossless — the value prints back as the same text — so
-`007` and `1.50` stay text:
+One twist: a bare word that is a literal **is** that value. Numbers, `true`,
+`false` and `null` are typed; anything else is text, and quotes always make
+text:
 
 ```dog
-pln { type 5 } { type -2.5 } { type true } { type 007 } { type 1.50 } { type 5px }
+pln { type 5 } { type -2.5 } { type 007 } { type true } { type null } { type 5px } { type "5" }
 ```
 ```text
-num num bool str str str
+num num num bool null str str
+```
+
+A backslash escapes punctuation and spaces (`\$`, `\"`, `\ `) or makes a
+control character (`\n`, `\t`); anything else, like `\d`, is an error. For text
+full of backslashes or quotes, use a **raw string**: three or more `"` on each
+side, with no escapes or interpolation inside. Use more quotes than the text
+has in a row:
+
+```dog
+pln """C:\dir\$file""" """"a "quoted" """word""" """"
+```
+```text
+C:\dir\$file a "quoted" """word""" 
 ```
 
 Note the semicolons: you need one after every command, except the last one of
@@ -119,7 +132,16 @@ arr map null fn
 ```
 
 `[a b c]` is an array, `[key = value]` is a map; `[]` and `[=]` are empty.
-Commas are optional.
+Commas are optional. Ranges slice arrays and text:
+
+```dog
+items = [a b c d e];
+title = "dog4 rocks";
+pln $items[1..3] $items[..2] $items[-2..] $title[5..]
+```
+```text
+[b c] [a b] [d e] rocks
+```
 
 ## The fold
 
@@ -181,8 +203,9 @@ pln ($x > 40 && $x < 50) (null ?? fallback) (0..4)
 true fallback [0 1 2 3]
 ```
 
-Inside an expression you can call functions as `max(1, 2)`, or write a
-command with arguments: `(len $list)`, `x = upper hello`.
+Inside an expression you call functions as `max(1, 2)`. Commands with
+arguments only run inside blocks, so it's `{ len $list }` or `len($list)`;
+`(len $list)` and `x = upper hello` are errors.
 
 ## Control flow
 
@@ -319,14 +342,19 @@ Hello 25
 |---|---|
 | output | `put pln print println` |
 | types | `type num str bool arr` |
-| sequences | `len first last append range keys values contains join split chars reverse sum sort index_of` |
-| math | `add sub mul div max min floor ceil round abs sqrt pow random shuffle pick` |
+| sequences | `len first last append range keys values contains count join split chars reverse sum sort index_of last_index_of` |
+| arrays & maps | `insert remove_at flatten unique zip chunk remove has entries from_entries` |
+| math | `add sub mul div max min floor ceil round trunc abs sign clamp sqrt pow exp ln log sin cos tan asin acos atan atan2 pi` |
+| numbers & stats | `fixed parse_int to_base product avg median` |
+| random | `random random_float shuffle pick sample uuid` |
 | logic | `eq neq lt gt leq geq like and or not true false` |
-| text | `upper lower trim strlen replace starts_with ends_with search matches is_alpha is_alphanumeric` |
-| functions | `map filter reduce each sort_by` |
-| JSON | `json.parse json.encode json.pretty gron` |
+| text | `upper lower capitalize trim trim_start trim_end pad_left pad_right lines strlen starts_with ends_with ord chr is_alpha is_alphanumeric is_digit is_space` |
+| regex | `replace matches search captures captures_all find_all split_re regex_escape` |
+| functions | `map filter reduce each sort_by any all find find_index flat_map group_by count_by min_by max_by` |
+| encodings | `json.parse json.encode json.pretty gron url.encode url.decode url.query url.parse base64.encode base64.decode hex.encode hex.decode sha256 hmac_sha256` |
+| time | `now date.format date.parse date.parts` |
 | meta & errors | `src eval fail assert` |
-| network | `get post` |
+| network | `get post fetch` |
 
 The full reference is in [docs/language.md](docs/language.md).
 
@@ -355,3 +383,4 @@ runtime.run("message", r#"bot = mod bot; use mod util; bot.reply { shout hi }"#)
 See [docs/embedding.md](docs/embedding.md) for module providers, native
 functions, limits and capabilities, and [docs/internals.md](docs/internals.md)
 for how it works inside. Coming from dog3? Read [MIGRATING.md](MIGRATING.md).
+Updating older dog4 scripts? Read [CHANGELOG.md](CHANGELOG.md).

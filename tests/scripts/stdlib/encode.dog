@@ -1,0 +1,14 @@
+pln { url.encode "a b&c/é~" } { url.decode "a%20b%26c%2F%C3%A9~" } { url.decode "a+b" };
+pln { url.query [q = "dog 4", tag = [a b], skip = null, n = 5] } [{ url.query [=] }];
+pln { url.parse "https://u:p%40ss@Example.com:8080/a/b?x=1&y=2&y=3+4#frag" };
+pln { url.parse "http://[::1]" };
+pln { base64.encode "hello wörld" } { base64.decode aGVsbG8gd8O2cmxk } { base64.decode aGk } { base64.encode "" };
+pln { base64.decode "Pz8_" } { base64.decode "Pz8/" } { base64.decode " aGk= " };
+pln { hex.encode hé } { hex.decode 68C3A9 };
+pln { sha256 "" };
+pln { sha256 abc } { hmac_sha256 key "The quick brown fox jumps over the lazy dog" };
+pln (try { url.parse example.com } catch e { put $e.message });
+pln (try { url.decode "%zz" } catch e { put $e.message });
+pln (try { base64.decode "a" } catch e { put $e.message });
+pln (try { base64.decode "/w==" } catch e { put $e.message });
+pln (try { hex.decode abc } catch e { put $e.message });

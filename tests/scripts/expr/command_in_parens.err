@@ -1,0 +1,5 @@
+error: `len` followed by arguments is a command, and commands only run inside blocks: write `{ len … }`, or call it as `len(…)`
+ --> command_in_parens:3:6
+  |
+3 | pln (len $x);
+  |      ^^^

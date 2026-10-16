@@ -1,0 +1,4 @@
+pln (try { ord ab } catch e { put $e.message });
+pln (try { chr -1 } catch e { put $e.message });
+pln (try { pad_left a 3 xy } catch e { put $e.message });
+pln (try { count abc "" } catch e { put $e.message });

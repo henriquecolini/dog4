@@ -1,0 +1,13 @@
+nums = [3 1 4 1 5 9 2 6];
+fn big (n) ($n > 4)
+pln { any $nums $big } { all $nums $big } { any [] $big } { all [] $big };
+pln { find $nums $big } { find_index $nums $big } { find [1] $big } { find_index [] $big };
+pln { flat_map [1 2 3] fn (n) { range $n } } { flat_map [a b] fn (x) $x$x };
+pln { group_by $nums fn (n) if ($n % 2 == 0) even else odd } { group_by [] $big };
+pln { count_by [apple avocado banana] fn (w) $w[..1] };
+pln { min_by [ab c def] fn (w) { strlen $w } } { max_by [ab c def] fn (w) { strlen $w } } { min_by [] $big };
+// Callbacks stop early when the answer is known.
+seen = 0;
+fn check (n) { seen += 1; put ($n > 2) }
+pln { any [1 5 9 9] $check } $seen;
+pln (try { max_by [1 a] fn (x) $x } catch e { put $e.message });

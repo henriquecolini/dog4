@@ -19,6 +19,7 @@ net = ["dep:minreq"]
 indexmap = "2"
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 regex = "1"
+sha2 = { version = "0.10", default-features = false }
 rand = { version = "0.8", default-features = false, features = ["alloc", "small_rng"] }
 rustc-hash = "2"
 clap = { version = "4", features = ["derive"], optional = true }

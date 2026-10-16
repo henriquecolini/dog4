@@ -1,5 +1,5 @@
 pln { eq 1 1 } { eq 1 1.0 } { neq 1 2 } { lt 1 2 } { gt 1 2 } { leq 2 2 } { geq 1 2 };
-pln { like a a } { like 1 1.0 } { like [a] [a] };
+pln { like a a } { like 1 "1.0" } { like [a] [a] };
 pln { and 1 0 } { or 0 x } { not "" } { true } { false };
 pln (if { eq 1 1; lt 1 2 } { put "both true" });
 pln (if { eq 1 1; lt 2 1 } { put never } else { put "a block of conditions is an AND" });

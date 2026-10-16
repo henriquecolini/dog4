@@ -1,4 +1,5 @@
-num num bool bool
+num num bool bool null
+num num num num num
 str str str str str str
-007 1.50 1e3
+7 1.5 1000 1000 -0.0005 007
 3 3

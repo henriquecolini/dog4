@@ -1,2 +1,4 @@
 pln \$x \{ \} \; \[ \( \\ ;
 pln one\ word "two\nlines";
+// Punctuation and spaces escape to themselves, in words and in quotes.
+pln "\. \- \' \$" '\" \{' a\,b;

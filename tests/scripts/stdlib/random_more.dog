@@ -1,0 +1,9 @@
+// Runs with a fixed seed; only properties are checked.
+f = { random_float };
+g = { random_float 5 6 };
+pln { type $f } ($f >= 0 && $f < 1) ($g >= 5 && $g < 6);
+s = { sample [1 2 3 4 5] 3 };
+pln { len $s } { len { unique $s } } { all $s fn (x) ($x >= 1 && $x <= 5) } { sample [a] 0 };
+u = { uuid };
+pln { strlen $u } { matches $u """^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$""" };
+pln (try { sample [1] 2 } catch e { put $e.message });

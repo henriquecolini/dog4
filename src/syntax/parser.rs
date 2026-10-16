@@ -39,6 +39,14 @@ pub fn parse_params(src: &str) -> Result<(Vec<Param>, Option<Param>)> {
     Ok(params)
 }
 
+/// What `[…]` after a value holds.
+pub(super) enum Subscript {
+    /// `[expr]`
+    Index(Expr),
+    /// `[lo..hi]`
+    Slice(Option<Expr>, Option<Expr>),
+}
+
 /// How a word is being read, which decides where it ends.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum WordMode {
@@ -48,8 +56,6 @@ pub(super) enum WordMode {
     Bracket,
     /// Inside an expression: only identifier characters, `$` pieces and quotes.
     Expr,
-    /// An argument of a command inside an expression: also ends at `,`.
-    Embedded,
 }
 
 pub(super) struct Parser<'a> {
@@ -76,13 +82,17 @@ pub(super) fn is_ident_char(c: char) -> bool {
     c.is_alphabetic() || c.is_ascii_digit() || c == '_'
 }
 
-fn escape(c: char) -> char {
+/// What `\c` stands for: `\n \t \r \0` are control characters, and ASCII
+/// punctuation and whitespace stand for themselves. Anything else (`\s`, `\d`,
+/// `\é`) is unknown, so a regex can't silently lose its backslashes.
+fn escaped(c: char) -> Option<char> {
     match c {
-        'n' => '\n',
-        't' => '\t',
-        'r' => '\r',
-        '0' => '\0',
-        other => other,
+        'n' => Some('\n'),
+        't' => Some('\t'),
+        'r' => Some('\r'),
+        '0' => Some('\0'),
+        c if c.is_ascii_punctuation() || c.is_whitespace() => Some(c),
+        _ => None,
     }
 }
 
@@ -582,7 +592,16 @@ impl<'a> Parser<'a> {
                 self.bump();
                 path.push(Key::Field(self.field_name()));
             } else if self.peek() == Some('[') {
-                path.push(Key::Index(self.index()?));
+                let bracket = self.pos;
+                match self.index()? {
+                    Subscript::Index(index) => path.push(Key::Index(index)),
+                    Subscript::Slice(..) => {
+                        return Err(self.error_at(
+                            "a slice is a copy, so it can't be assigned to or referenced",
+                            self.span_from(bracket),
+                        ));
+                    }
+                }
             } else {
                 break;
             }
@@ -603,14 +622,46 @@ impl<'a> Parser<'a> {
         self.src[start..self.pos].into()
     }
 
-    /// `[expr]` after a value.
-    pub(super) fn index(&mut self) -> Result<Expr> {
+    /// `[expr]` or a slice `[lo..hi]` (either bound may be left out) after a value.
+    pub(super) fn index(&mut self) -> Result<Subscript> {
         self.expect('[')?;
         self.skip_trivia()?;
-        let index = self.expr()?;
+        let subscript = if self.starts_with("..") {
+            self.pos += 2;
+            Subscript::Slice(None, self.slice_end()?)
+        } else {
+            let lo = self.range_operand()?;
+            self.skip_trivia()?;
+            if self.starts_with("..") {
+                self.pos += 2;
+                Subscript::Slice(Some(lo), self.slice_end()?)
+            } else {
+                Subscript::Index(self.expr_from(lo)?)
+            }
+        };
         self.skip_trivia()?;
         self.expect(']')?;
-        Ok(index)
+        Ok(subscript)
+    }
+
+    /// The upper bound of a slice, if there is one before `]`.
+    fn slice_end(&mut self) -> Result<Option<Expr>> {
+        self.skip_trivia()?;
+        if self.peek() == Some(']') {
+            return Ok(None);
+        }
+        Ok(Some(self.range_operand()?))
+    }
+
+    /// Applies `[…]` to `base`.
+    pub(super) fn subscript(&self, base: Expr, subscript: Subscript, start: usize) -> Expr {
+        let kind = match subscript {
+            Subscript::Index(index) => ExprKind::Index(Box::new(base), Box::new(index)),
+            Subscript::Slice(lo, hi) => {
+                ExprKind::Slice(Box::new(base), lo.map(Box::new), hi.map(Box::new))
+            }
+        };
+        Expr::new(kind, self.span_from(start))
     }
 
     // ----- functions -----------------------------------------------------------------
@@ -826,11 +877,8 @@ impl<'a> Parser<'a> {
                 let name = self.field_name();
                 expr = Expr::new(ExprKind::Field(Box::new(expr), name), self.span_from(start));
             } else if self.peek() == Some('[') {
-                let index = self.index()?;
-                expr = Expr::new(
-                    ExprKind::Index(Box::new(expr), Box::new(index)),
-                    self.span_from(start),
-                );
+                let subscript = self.index()?;
+                expr = self.subscript(expr, subscript, start);
             } else {
                 return Ok(expr);
             }
@@ -1045,7 +1093,6 @@ impl<'a> Parser<'a> {
                     c.is_whitespace()
                         || matches!(c, ';' | '{' | '}' | '(' | ')' | '[' | ']')
                         || (mode == WordMode::Bracket && matches!(c, ',' | '='))
-                        || (mode == WordMode::Embedded && c == ',')
                 }
             };
             if ends {
@@ -1055,7 +1102,11 @@ impl<'a> Parser<'a> {
                 '"' => {
                     plain = false;
                     flush(&mut pieces, &mut text, text_start, self.pos);
-                    pieces.push(self.dquote()?);
+                    pieces.push(if self.starts_with("\"\"\"") {
+                        self.raw_string()?
+                    } else {
+                        self.dquote()?
+                    });
                 }
                 '\'' if (pieces.is_empty() && text.is_empty()) || mode == WordMode::Expr => {
                     plain = false;
@@ -1067,9 +1118,8 @@ impl<'a> Parser<'a> {
                     if text.is_empty() {
                         text_start = self.pos;
                     }
-                    self.bump();
-                    match self.bump() {
-                        Some(e) => text.push(escape(e)),
+                    match self.escape()? {
+                        Some(e) => text.push(e),
                         None => return Err(self.error("nothing to escape after `\\`")),
                     }
                 }
@@ -1158,15 +1208,120 @@ impl<'a> Parser<'a> {
                 let name = self.field_name();
                 expr = Expr::new(ExprKind::Field(Box::new(expr), name), self.span_from(start));
             } else if self.peek() == Some('[') {
-                let index = self.index()?;
-                expr = Expr::new(
-                    ExprKind::Index(Box::new(expr), Box::new(index)),
-                    self.span_from(start),
-                );
+                let subscript = self.index()?;
+                expr = self.subscript(expr, subscript, start);
             } else {
                 return Ok(expr);
             }
         }
+    }
+
+    /// Reads an escape `\c`, with the cursor on the `\`. `None` at the end of
+    /// the input.
+    fn escape(&mut self) -> Result<Option<char>> {
+        let start = self.pos;
+        self.bump();
+        let Some(c) = self.bump() else {
+            return Ok(None);
+        };
+        escaped(c).map(Some).ok_or_else(|| {
+            self.error_at(
+                format!(
+                    "unknown escape `\\{c}`; write `\\\\` for a backslash, or use a raw \
+                     string: `\"\"\"…\"\"\"`"
+                ),
+                self.span_from(start),
+            )
+        })
+    }
+
+    /// `"""…"""`: a raw string, with no escapes or interpolation. It opens with
+    /// three or more quotes and closes with the same number, so it can contain
+    /// any shorter run of quotes. If it spans several lines, its text starts on
+    /// the line after the opening quotes and ends on the line before the closing
+    /// ones, and the closing quotes' indentation is removed from every line.
+    pub(super) fn raw_string(&mut self) -> Result<Expr> {
+        let start = self.pos;
+        let quotes = self.src[start..].bytes().take_while(|&b| b == b'"').count();
+        self.pos += quotes;
+        let body_start = self.pos;
+        let opening = Span::new(start, body_start);
+        let mut search = body_start;
+        let body_end = loop {
+            let Some(found) = self.src[search..].find('"') else {
+                return Err(self.error_at("unclosed raw string", opening));
+            };
+            let run_start = search + found;
+            let run = self.src[run_start..]
+                .bytes()
+                .take_while(|&b| b == b'"')
+                .count();
+            if run == quotes {
+                break run_start;
+            }
+            if run > quotes {
+                return Err(self.error_at(
+                    format!(
+                        "this raw string contains {run} quotes in a row; open and close it \
+                         with at least {} quotes",
+                        run + 1
+                    ),
+                    Span::new(run_start, run_start + run),
+                ));
+            }
+            search = run_start + run;
+        };
+        self.pos = body_end + quotes;
+        let body = &self.src[body_start..body_end];
+        let text = if body.contains('\n') {
+            self.raw_lines(body, body_start)?
+        } else {
+            body.to_string()
+        };
+        Ok(Expr::new(
+            ExprKind::Lit(Value::str(text)),
+            self.span_from(start),
+        ))
+    }
+
+    /// The text of a multi-line raw string whose body (between the quotes)
+    /// starts at `offset` in the source.
+    fn raw_lines(&self, body: &str, offset: usize) -> Result<String> {
+        let mut lines: Vec<(usize, &str)> = Vec::new();
+        let mut at = offset;
+        for line in body.split('\n') {
+            lines.push((at, line.strip_suffix('\r').unwrap_or(line)));
+            at += line.len() + 1;
+        }
+        let blank = |line: &str| line.chars().all(char::is_whitespace);
+        let (first_at, first) = lines[0];
+        if !blank(first) {
+            return Err(self.error_at(
+                "a multi-line raw string starts on the line after its opening quotes",
+                Span::new(first_at, first_at + first.len()),
+            ));
+        }
+        let (last_at, indent) = lines[lines.len() - 1];
+        if !blank(indent) {
+            return Err(self.error_at(
+                "the closing quotes of a multi-line raw string go on their own line",
+                Span::new(last_at, last_at + indent.len()),
+            ));
+        }
+        let mut out = Vec::new();
+        for &(line_at, line) in &lines[1..lines.len() - 1] {
+            if blank(line) {
+                out.push("");
+            } else if let Some(rest) = line.strip_prefix(indent) {
+                out.push(rest);
+            } else {
+                return Err(self.error_at(
+                    "this line is indented less than the raw string's closing quotes",
+                    Span::new(line_at, line_at + line.len()),
+                ));
+            }
+        }
+        Ok(out.join("\n"))
     }
 
     /// `"…"`: escapes and `$` interpolation; always produces text.
@@ -1183,17 +1338,12 @@ impl<'a> Parser<'a> {
                     self.bump();
                     break;
                 }
-                Some('\\') => {
-                    self.bump();
-                    match self.bump() {
-                        Some(e) => text.push(escape(e)),
-                        None => {
-                            return Err(
-                                self.error_at("unclosed string", Span::new(start, start + 1))
-                            );
-                        }
+                Some('\\') => match self.escape()? {
+                    Some(e) => text.push(e),
+                    None => {
+                        return Err(self.error_at("unclosed string", Span::new(start, start + 1)));
                     }
-                }
+                },
                 Some('$') => match self.dollar_piece(false)? {
                     Some(piece) => {
                         if !text.is_empty() {
@@ -1235,16 +1385,22 @@ impl<'a> Parser<'a> {
         self.expect('\'')?;
         let mut text = String::new();
         loop {
-            match self.bump() {
+            match self.peek() {
                 None => return Err(self.error_at("unclosed string", Span::new(start, start + 1))),
-                Some('\'') => break,
-                Some('\\') => match self.bump() {
-                    Some(e) => text.push(escape(e)),
+                Some('\'') => {
+                    self.bump();
+                    break;
+                }
+                Some('\\') => match self.escape()? {
+                    Some(e) => text.push(e),
                     None => {
                         return Err(self.error_at("unclosed string", Span::new(start, start + 1)));
                     }
                 },
-                Some(c) => text.push(c),
+                Some(c) => {
+                    text.push(c);
+                    self.bump();
+                }
             }
         }
         Ok(Expr::new(

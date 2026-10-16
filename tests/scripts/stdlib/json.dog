@@ -1,7 +1,7 @@
 data = json.parse('{"name": "Ana", "tags": ["a", "b"], "n": 1.5, "ok": true, "none": null}');
-pln $data $data.tags[1] (type $data.n);
+pln $data $data.tags[1] { type $data.n };
 pln (json.encode([a = 1, b = [true (null) "x"]]));
 put (json.pretty([a = [1]]));
 pln;
 put { gron '{ "foo": [ 1, 2, 3 ], "bar": { "baz": false }, "with space": "x" }' };
-pln (type { gron "not json" });
+pln { type { gron "not json" } };

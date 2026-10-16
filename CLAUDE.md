@@ -32,7 +32,9 @@ source → `syntax/` (hand-written, scannerless parser; command mode vs expressi
 
 - A bare block or control statement (`{ … }`, `if`, `for`, `while`) used as a *statement* has its value discarded — `{ if c { pln x } }` prints nothing. Use `put if …`, or `x = for …` (the right side of `=` is an expression).
 - Newlines don't separate statements; `;` is required after commands and assignments.
-- Bare words are text, except exact numbers/bools (`5`, `true`; not `007`, not `null`). In expressions, bare identifiers are strings unless called (`f(x)`) or followed by arguments on the same line (`(len $x)`).
+- Bare words are text, except literals: numbers as in expressions (`5`, `007` = 7, `1e3`, `1_000`), `true`, `false`, `null`. Quote to keep text (`"007"`).
+- Commands only run in blocks: `{ len $x }` or `len($x)`. `(len $x)` and `x = upper hi` are syntax errors. In expressions, bare identifiers are strings unless called (`f(x)`).
+- Escapes are strict: `\` before a letter or digit (other than `\n \t \r \0`) is an error, so regexes go in raw strings: `"""\d+"""`.
 - `$name.txt` is a field access; write `${name}.txt`.
 - Always run new dog4 snippets; the doc and golden tests will catch drift. After `BLESS=1`, review every changed expectation — never bless blindly.
 

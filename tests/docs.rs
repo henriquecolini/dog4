@@ -1,6 +1,6 @@
 //! Executes the dog4 examples in the documentation.
 //!
-//! In `README.md`, `MIGRATING.md` and `docs/*.md`, every code block tagged
+//! In `README.md`, `MIGRATING.md`, `CHANGELOG.md` and `docs/*.md`, every code block tagged
 //! `dog` is run in a fresh runtime. If it is immediately followed by a `text`
 //! block, the script's result (printed text, then its output) must match it
 //! exactly; a result starting with `error:` means the script must fail with
@@ -153,7 +153,11 @@ fn check(example: &Example) -> Result<(), Failed> {
 fn main() {
     let args = Arguments::from_args();
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let mut files = vec![root.join("README.md"), root.join("MIGRATING.md")];
+    let mut files = vec![
+        root.join("README.md"),
+        root.join("MIGRATING.md"),
+        root.join("CHANGELOG.md"),
+    ];
     if let Ok(entries) = std::fs::read_dir(root.join("docs")) {
         let mut docs: Vec<_> = entries
             .flatten()

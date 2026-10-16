@@ -301,6 +301,53 @@ pub fn get_key(value: &Value, key: &Value) -> Result<Value> {
     }
 }
 
+/// `value[lo..hi]`: the items (or characters) from `lo` up to, not including,
+/// `hi`. A `null` bound is the start or the end; negative bounds count from the
+/// end; bounds past either end are clamped, so slicing never fails for being
+/// out of range. Slicing `null` gives `null`.
+pub fn slice(value: &Value, lo: &Value, hi: &Value, meter: &mut Meter) -> Result<Value> {
+    let bounds = |len: usize| -> Result<(usize, usize)> {
+        let bound = |b: &Value, default: usize| match b {
+            Value::Null => Ok(default),
+            b => match int_key(b) {
+                Some(i) => {
+                    let i = if i < 0 {
+                        i.saturating_add(len as i64)
+                    } else {
+                        i
+                    };
+                    Ok(i.clamp(0, len as i64) as usize)
+                }
+                None => Err(Error::type_error(format!(
+                    "slice bounds are whole numbers, not {}",
+                    b.describe()
+                ))),
+            },
+        };
+        let (lo, hi) = (bound(lo, 0)?, bound(hi, len)?);
+        Ok((lo, hi.max(lo)))
+    };
+    match value {
+        Value::Arr(items) => {
+            let (lo, hi) = bounds(items.len())?;
+            meter.tick((hi - lo) as u64)?;
+            Ok(Value::arr(items[lo..hi].to_vec()))
+        }
+        Value::Str(s) => {
+            let len = s.chars().count();
+            meter.tick(len as u64 / 8)?;
+            let (lo, hi) = bounds(len)?;
+            let byte = |i: usize| s.char_indices().nth(i).map_or(s.len(), |(b, _)| b);
+            Ok(Value::str(&s[byte(lo)..byte(hi)]))
+        }
+        Value::Null => Ok(Value::Null),
+        other => Err(Error::type_error(format!(
+            "can't slice {}; only arrays and strings can be sliced",
+            super::with_article(other.type_name())
+        ))),
+    }
+}
+
 /// Reads `root` followed by a path of keys.
 pub fn get_path(root: &Value, keys: &[Value]) -> Result<Value> {
     let mut current = root.clone();

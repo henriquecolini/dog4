@@ -1,0 +1,5 @@
+error: a slice is a copy, so it can't be assigned to or referenced
+ --> slice_assign:2:2
+  |
+2 | a[0..1] = [9];
+  |  ^^^^^^

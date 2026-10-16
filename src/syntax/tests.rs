@@ -111,6 +111,10 @@ fn sexp(expr: &Expr) -> String {
         ExprKind::Var(name) => format!("${name}"),
         ExprKind::Field(base, name) => format!("{}.{name}", sexp(base)),
         ExprKind::Index(base, i) => format!("{}[{}]", sexp(base), sexp(i)),
+        ExprKind::Slice(base, lo, hi) => {
+            let bound = |b: &Option<Box<Expr>>| b.as_ref().map_or(String::new(), |b| sexp(b));
+            format!("{}[{}..{}]", sexp(base), bound(lo), bound(hi))
+        }
         ExprKind::Glue(parts) => {
             let parts: Vec<String> = parts.iter().map(sexp).collect();
             format!("(glue {})", parts.join(" "))
@@ -222,10 +226,14 @@ fn commands_and_words() {
 fn bare_literals() {
     assert_eq!(p("put 5 -2.5 true false"), "(call $put 5 -2.5 true false)");
     assert_eq!(
-        p("put 007 1.50 1e3 null +5 5px"),
-        r#"(call $put "007" "1.50" "1e3" "null" "+5" "5px")"#
+        p("put 007 1.50 1e3 1_000 null"),
+        "(call $put 7 1.5 1000 1000 null)"
     );
-    assert_eq!(p(r"put \5 '5' "), r#"(call $put "5" "5")"#);
+    assert_eq!(
+        p("put +5 5px inf 1. .5 1e 1.2.3 -"),
+        r#"(call $put "+5" "5px" "inf" "1." ".5" "1e" "1.2.3" "-")"#
+    );
+    assert_eq!(p(r#"put "5" '5' "#), r#"(call $put "5" "5")"#);
 }
 
 #[test]
@@ -235,6 +243,43 @@ fn quoting_and_escapes() {
     assert_eq!(p(r"put a\ b \$x"), r#"(call $put "a b" "$x")"#);
     assert_eq!(p(r#"put 'raw $x'"#), r#"(call $put "raw $x")"#);
     assert_eq!(p(r#"put cost:$ $"#), r#"(call $put "cost:$" "$")"#);
+    assert_eq!(p(r#"put "\.\{\ " '\0'"#), r#"(call $put ".{ " "\u0000")"#);
+    for src in [r#"put "\s""#, r"put '\d'", r"put a\wb", r#"put "\é""#] {
+        assert!(err(src).contains("unknown escape"), "{src}");
+    }
+}
+
+#[test]
+fn raw_strings() {
+    assert_eq!(p(r#"put """a\s $x""""#), r#"(call $put "a\\s $x")"#);
+    assert_eq!(
+        p(r##"put """"""a """"b"""" c"""""""##),
+        r#"(call $put "a \"\"\"\"b\"\"\"\" c")"#
+    );
+    assert_eq!(p(r#"put x"""y"""z"#), r#"(call $put (glue "x" "y" "z"))"#);
+    assert_eq!(
+        p("put \"\"\"\n    one\n\n      two\n    \"\"\""),
+        r#"(call $put "one\n\n  two")"#
+    );
+    assert_eq!(p("put \"\"\"\r\n  a\r\n  \"\"\""), r#"(call $put "a")"#);
+    assert!(err(r#"put """a"#).contains("unclosed raw string"));
+    assert!(err(r##"put """a"""""##).contains("contains 4 quotes"));
+    assert!(err("put \"\"\"a\n\"\"\"").contains("starts on the line after"));
+    assert!(err("put \"\"\"\na\"\"\"").contains("on their own line"));
+    assert!(err("put \"\"\"\n a\n  \"\"\"").contains("indented less"));
+}
+
+#[test]
+fn slices() {
+    assert_eq!(p("put $a[1..2]"), "(call $put $a[1..2])");
+    assert_eq!(
+        p("put $a[..2] $a[1..] $a[..]"),
+        "(call $put $a[..2] $a[1..] $a[..])"
+    );
+    assert_eq!(p("x = $a[$i + 1..-1]"), "(= x $a[(+ $i 1)..-1])");
+    assert_eq!(p("x = $a[$i == 1]"), "(= x $a[(== $i 1)])");
+    assert_eq!(p("x = f()[1..][0]"), "(= x (call $f)[1..][0])");
+    assert!(err("x[0..1] = 2").contains("can't be assigned"));
 }
 
 #[test]
@@ -325,19 +370,26 @@ fn calls_in_expressions() {
 }
 
 #[test]
-fn commands_in_expressions() {
-    assert_eq!(p("x = len $l"), "(= x (call $len $l))");
-    assert_eq!(p("x = (type $l) + 1"), r#"(= x (+ (call $type $l) 1))"#);
-    assert_eq!(p("x = (abs -3)"), "(= x (call $abs -3))");
+fn commands_are_not_expressions() {
+    for src in [
+        "x = len $l",
+        "x = (type $l) + 1",
+        "x = (abs -3)",
+        "x = ($f a b)",
+        "x = max(len $l, 2)",
+        "x = upper hello world",
+        "x = $m.f a",
+    ] {
+        assert!(
+            err(src).contains("commands only run inside blocks"),
+            "{src}"
+        );
+    }
     assert_eq!(p("x = (a - 3)"), r#"(= x (- "a" 3))"#);
-    assert_eq!(p("x = ($f a b)"), r#"(= x (call $f "a" "b"))"#);
+    assert_eq!(p("x = { len $l }"), "(= x {(call $len $l)})");
     assert_eq!(
-        p("x = max(len $l, 2)"),
-        "(= x (call $max (call $len $l) 2))"
-    );
-    assert_eq!(
-        p("x = upper hello world"),
-        r#"(= x (call $upper "hello" "world"))"#
+        p("x = max({ len $l }, 2)"),
+        "(= x (call $max {(call $len $l)} 2))"
     );
 }
 
@@ -550,7 +602,6 @@ proptest! {
 }
 
 #[test]
-fn embedded_commands_stay_on_one_line() {
-    assert_eq!(p("x = upper a b"), r#"(= x (call $upper "a" "b"))"#);
+fn a_missing_semicolon_is_not_a_command() {
     assert!(err("x = Hello\nfn hi () {}").contains("expected `;`"));
 }

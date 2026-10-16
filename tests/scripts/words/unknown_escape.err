@@ -1,0 +1,5 @@
+error: unknown escape `\d`; write `\\` for a backslash, or use a raw string: `"""…"""`
+ --> unknown_escape:3:20
+  |
+3 | pln { matches 123 "\d+" };
+  |                    ^^
