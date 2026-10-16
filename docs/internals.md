@@ -130,8 +130,9 @@ dropped, so a dropped runtime frees everything.
 ## The sandbox
 
 `Meter` counts fuel (backward jumps and calls cost 1; natives charge for the
-data they copy), checks the deadline and the interrupt flag every 4096 units,
-and enforces string, collection and output sizes *before* allocating. Regexes
+data they copy), checks the deadline and the interrupt flag every 4096 units
+(and right after blocking natives such as `get`, which also cap their own
+timeouts at the time left), and enforces string, collection and output sizes *before* allocating. Regexes
 use the linear-time `regex` crate with size limits; JSON parsing is depth
 limited by serde. Limit errors can't be caught.
 

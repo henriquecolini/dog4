@@ -90,6 +90,12 @@ assert_eq!(rt.run("main", "put ok").unwrap().to_string(), "ok");
 
 To stop a script from another thread, use `rt.interrupt_handle().trigger()`.
 
+The VM checks the clock and the interrupt flag every few thousand fuel units,
+which can't see time spent *inside* a native. Natives that block (network,
+databases, …) should wait no longer than `vm.meter().remaining()` and call
+`vm.meter().check_now()?` when they return, so that a loop of slow calls still
+stops at the deadline. The built-in `get` and `post` do both.
+
 ## Native functions and modules
 
 Natives are Rust closures with a signature written in dog4 syntax. Arguments

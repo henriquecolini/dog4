@@ -129,6 +129,21 @@ impl Meter {
         Ok(())
     }
 
+    /// How long the run may still take, or `None` without a wall-clock limit.
+    /// Natives that block (network, databases) shouldn't wait longer than this.
+    pub fn remaining(&self) -> Option<Duration> {
+        self.deadline
+            .map(|d| d.saturating_duration_since(Instant::now()))
+    }
+
+    /// Checks the deadline and the interrupt flag right away. `tick` only looks
+    /// every few thousand units, so natives that block should call this after
+    /// they return.
+    pub fn check_now(&mut self) -> Result<()> {
+        self.until_check = CHECK_INTERVAL;
+        self.check()
+    }
+
     #[cold]
     fn check(&mut self) -> Result<()> {
         if self.interrupt.take() {
@@ -214,6 +229,19 @@ mod tests {
             .find_map(|_| meter.tick(1).err())
             .expect("interrupt must fire");
         assert_eq!(err.kind(), crate::ErrorKind::Limit(Limit::Interrupted));
+    }
+
+    #[test]
+    fn check_now_notices_the_deadline() {
+        let limits = Limits {
+            timeout: Some(Duration::ZERO),
+            ..Limits::default()
+        };
+        let mut meter = Meter::new(&limits, Interrupt::default());
+        assert_eq!(meter.remaining(), Some(Duration::ZERO));
+        let err = meter.check_now().unwrap_err();
+        assert_eq!(err.kind(), crate::ErrorKind::Limit(Limit::Timeout));
+        assert_eq!(Meter::unlimited().remaining(), None);
     }
 
     #[test]

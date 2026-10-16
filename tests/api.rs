@@ -180,6 +180,26 @@ fn timeout() {
     assert_eq!(err.kind(), ErrorKind::Limit(Limit::Timeout));
 }
 
+#[cfg(feature = "net")]
+#[test]
+fn requests_respect_the_timeout() {
+    // The kernel completes the handshake, but nobody ever answers.
+    let server = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}/", server.local_addr().unwrap());
+    let limits = Limits {
+        timeout: Some(Duration::from_millis(300)),
+        ..Limits::default()
+    };
+    let mut rt = Runtime::builder().limits(limits).build();
+    let started = Instant::now();
+    let src = format!("while true {{ get \"{url}\" 30; }}");
+    let err = rt.run("main", &src).unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::Limit(Limit::Timeout));
+    // Each request would wait 30 s; the run's deadline (rounded up to minreq's
+    // whole seconds) stops the first one.
+    assert!(started.elapsed() < Duration::from_secs(5));
+}
+
 #[test]
 fn errors_carry_kind_location_trace_and_value() {
     let mut rt = Runtime::new();

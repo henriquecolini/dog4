@@ -439,7 +439,7 @@ arguments the same way. "Sequences" accept arrays, or text split into words
 | `src function` | source code |
 | `eval code` | runs code in the current module (capability `eval`) |
 | `fail %message`, `assert cond [%message]` | raise errors |
-| `get url [timeout]`, `post url [body [timeout]]` | HTTP (capability `net`) |
+| `get url [timeout]`, `post url [body [timeout]]` | HTTP (capability `net`); `timeout` is in seconds (default 10, 1–60), cut short by the run's time limit |
 
 ```dog
 pln { first "a b c" 2 } { first [1 2 3] 2 } { len "a b c" } { range 3 } { join [x y] - };
