@@ -5,6 +5,25 @@ docs`). A block followed by a `text` block starting with `error:` must fail
 with that message, so the "before" examples below show the real errors that old
 scripts will hit.
 
+## 2026-11-12 — `stream`
+
+A new HTTP builtin (capability `net`), for responses that arrive a piece at a
+time, such as server-sent events or JSON lines:
+
+```dog ignore
+stream url [options] f
+```
+
+It sends the request as `fetch` does, with the same options, and calls `f`
+with each line of the body as soon as it has arrived, without its `\n` or
+`\r\n`. A last line with no ending is passed too. When `f` returns `false` the
+request stops and the connection is closed; any other value goes on. Like
+`get` and `post`, a status outside 200–299 is an error, raised before `f` is
+called. The `timeout` option covers the whole request, and the run's time
+limit applies while `f` runs. Nothing changes for existing scripts, except
+that a function of theirs named `stream` now hides the builtin, as with any
+other.
+
 ## 2026-10-16 — stricter syntax, typed literals, a bigger standard library
 
 This release changes how some existing scripts parse and behave. The first part

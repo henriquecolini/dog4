@@ -1,6 +1,8 @@
 //! The HTTP builtins against a local server that echoes each request back as
 //! JSON: `{"method", "target", "headers", "body"}`. A request for
 //! `/status/N` gets status N, and `/redirect` redirects to `/landed`.
+//! `/lines` sends a few lines a moment apart, chunked like server-sent events,
+//! and `/endless` sends numbered lines until the client goes away.
 
 #![cfg(feature = "net")]
 
@@ -40,6 +42,35 @@ fn server() -> String {
             }
             let mut body = vec![0; length];
             reader.read_exact(&mut body).unwrap();
+            let mut stream = stream;
+            if target == "/lines" || target == "/endless" {
+                let _ = write!(
+                    stream,
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\n\
+                     Transfer-Encoding: chunked\r\nConnection: close\r\n\r\n"
+                );
+                let mut chunk = |text: &str| {
+                    let sent = write!(stream, "{:x}\r\n{text}\r\n", text.len());
+                    let _ = stream.flush();
+                    std::thread::sleep(std::time::Duration::from_millis(150));
+                    sent.is_ok()
+                };
+                if target == "/lines" {
+                    // A line split across chunks, a CRLF ending, an empty
+                    // line, and a last line with no ending at all.
+                    for piece in ["data: a\n", "data: ", "b\r\n", "\n", "last"] {
+                        chunk(piece);
+                    }
+                    let _ = write!(stream, "0\r\n\r\n");
+                } else {
+                    for i in 0.. {
+                        if !chunk(&format!("{i}\n")) {
+                            break;
+                        }
+                    }
+                }
+                continue;
+            }
             let echo = serde_json::json!({
                 "method": method,
                 "target": target,
@@ -54,7 +85,6 @@ fn server() -> String {
             } else {
                 ("200".to_string(), String::new())
             };
-            let mut stream = stream;
             let _ = write!(
                 stream,
                 "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nX-Echo: yes\r\n\
@@ -146,5 +176,57 @@ fn errors() {
     assert_eq!(
         run(r#"post $base a [body = b]"#).unwrap_err(),
         "`post` takes its body as an argument, not in the options"
+    );
+}
+
+#[test]
+fn stream_calls_back_with_each_line_as_it_arrives() {
+    let out = run(r#"let got = [];
+           let times = [];
+           let start = { now };
+           stream "$base/lines" fn (line) { got += [$line]; times += [({ now } - $start)] };
+           let done = ({ now } - $start);
+           pln { json.encode $got };
+           // The first line came well before the whole response did.
+           pln ($done - $times[0] > 0.3)"#)
+    .unwrap();
+    assert_eq!(out, "[\"data: a\",\"data: b\",\"\",\"last\"]\ntrue\n");
+}
+
+#[test]
+fn stream_stops_when_the_callback_says_false() {
+    let out = run(r#"let got = [];
+           stream "$base/endless" fn (line) { got += [$line]; put ({ len $got } < 3) };
+           pln $got"#)
+    .unwrap();
+    assert_eq!(out, "[\"0\" \"1\" \"2\"]\n");
+}
+
+#[test]
+fn stream_sends_the_request_like_fetch() {
+    let out = run(
+        r#"let got = [];
+           stream "$base/p" [body = [a = 1], headers = [X-Test = yes]] fn (line) { got += [{ json.parse $line }] };
+           let e = $got[0];
+           pln { len $got } $e.method $e.headers["x-test"] $e.headers["content-type"] $e.body"#,
+    )
+    .unwrap();
+    assert_eq!(out, "1 POST yes application/json {\"a\":1}\n");
+}
+
+#[test]
+fn stream_errors() {
+    assert_eq!(
+        run(r#"stream "$base/status/503" fn (line) { fail "no line expected" }"#).unwrap_err(),
+        "request failed with status 503 X"
+    );
+    assert_eq!(
+        run(r#"stream "$base/lines" fn (line) { fail "stopped at $line" }"#).unwrap_err(),
+        "stopped at data: a"
+    );
+    assert!(
+        run(r#"stream "$base/lines" [tiemout = 5] fn (line) {}"#)
+            .unwrap_err()
+            .starts_with("unknown request option `tiemout`")
     );
 }
