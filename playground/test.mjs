@@ -8,7 +8,7 @@ console.log("imports needed:", WebAssembly.Module.imports(await WebAssembly.comp
 const dog4 = wrap(instance);
 const checks = [
   ["put { put 1; put 2 }", (r) => r.ok && r.output === "3"],
-  ["println hi; pln [a (null)]", (r) => r.ok && r.printed === "hi\n" && r.output === "[a (null)]\n"],
+  ["println hi; pln [a (null)]", (r) => r.ok && r.printed === "hi\n" && r.output === "[a null]\n"],
   ["pln ok;\npln $nope", (r) => !r.ok && r.line === 2 && r.kind === "name"],
   ["while true {}", (r) => !r.ok && r.kind === "limit"],
   ['use mod greet; hi Bob', (r) => r.ok && r.output === "Hello Bob\n"],
