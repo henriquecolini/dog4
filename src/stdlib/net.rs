@@ -4,6 +4,9 @@
 //!   as text, and raise an error for a status outside 200–299.
 //! * `fetch url [options]` gives the whole response, `[status ok url headers
 //!   body]`, whatever its status.
+//! * `stream url [options] f` calls `f` with each line of the body as it
+//!   arrives, for responses that come a piece at a time (server-sent events,
+//!   JSON lines). Like `get`/`post`, a status outside 200–299 is an error.
 //!
 //! The options are a map: `method`, `headers` (a map), `query` (a map added to
 //! the URL), `body`, `form` (a map sent URL-encoded), `timeout` (seconds) and
@@ -244,6 +247,71 @@ fn receive(request: minreq::Request, max: usize) -> Result<Response> {
     })
 }
 
+/// `stream`: sends the request and calls `f` with each line of a successful
+/// response's body as soon as it has arrived, without its line ending (`\n` or
+/// `\r\n`). A last line with no ending is passed too. The request stops early,
+/// closing the connection, when `f` returns `false`; anything else goes on.
+/// The `timeout` option covers the whole request, not each line, and the run's
+/// time limit still applies while `f` runs.
+fn stream(vm: &mut Vm, args: &mut [Value]) -> Result<Value> {
+    let (options, f) = match args {
+        [_, f] => (Options::default(), std::mem::take(f)),
+        [_, options, f] => (Options::parse(options)?, std::mem::take(f)),
+        _ => unreachable!("`stream` is declared with 2 or 3 parameters"),
+    };
+    let request = options.request(vm, text(&args[0]))?;
+    let failed = |e: minreq::Error| Error::new(ErrorKind::Io, format!("request failed: {e}"));
+    let response = request.send_lazy().map_err(failed);
+    vm.meter().check_now()?;
+    let response = response?;
+    if !(200..300).contains(&response.status_code) {
+        return Err(Error::new(
+            ErrorKind::Io,
+            format!(
+                "request failed with status {} {}",
+                response.status_code, response.reason_phrase
+            ),
+        ));
+    }
+    let max = vm.meter().max_str;
+    let mut line = Vec::new();
+    let deliver = |vm: &mut Vm, line: &mut Vec<u8>| -> Result<bool> {
+        if line.last() == Some(&b'\r') {
+            line.pop();
+        }
+        let text = String::from_utf8(std::mem::take(line))
+            .map_err(|_| Error::new(ErrorKind::Io, "the response is not UTF-8 text"))?;
+        let keep_going = vm.call(&f, vec![Value::str(text)])?;
+        // A slow stream barely spends fuel, so look at the clock here too.
+        vm.meter().check_now()?;
+        Ok(!matches!(keep_going, Value::Bool(false)))
+    };
+    for byte in response {
+        let (byte, _) = match byte {
+            Ok(byte) => byte,
+            Err(e) => {
+                // The run's deadline cut the request short: report that.
+                vm.meter().check_now()?;
+                return Err(failed(e));
+            }
+        };
+        if byte == b'\n' {
+            if !deliver(vm, &mut line)? {
+                return Ok(Value::Null);
+            }
+        } else {
+            if line.len() >= max {
+                return Err(Error::limit(crate::error::Limit::StrSize));
+            }
+            line.push(byte);
+        }
+    }
+    if !line.is_empty() {
+        deliver(vm, &mut line)?;
+    }
+    Ok(Value::Null)
+}
+
 /// `get` / `post`: the body of a successful response.
 fn body_of(vm: &mut Vm, url: &Value, options: Options) -> Result<Value> {
     let request = options.request(vm, text(url))?;
@@ -325,4 +393,6 @@ pub(super) fn install(lib: &mut Library) {
     lib.def("post", "url: str, body, options: map", post);
     lib.def("fetch", "url: str", fetch);
     lib.def("fetch", "url: str, options: map", fetch);
+    lib.def("stream", "url: str, f: fn", stream);
+    lib.def("stream", "url: str, options: map, f: fn", stream);
 }

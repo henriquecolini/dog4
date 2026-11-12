@@ -629,6 +629,7 @@ pln $t { date.format $t } { date.format $t "%a %d %b %Y, %I:%M %p" } { date.part
 |---|---|
 | `get url [options]`, `post url [body [options]]` | the response body; a status outside 200–299 is an error |
 | `fetch url [options]` | the whole response, `[status ok url headers body]`, whatever its status |
+| `stream url [options] f` | calls `f` with each line of the body as it arrives, without its line ending; `f` returning `false` stops the request. A status outside 200–299 is an error |
 
 The options are a map: `method` (`GET`, or `POST` when there is a body),
 `headers` (a map), `query` (a map added to the URL, as by `url.query`), `body`,
@@ -639,7 +640,17 @@ JSON with `Content-Type: application/json`, unless the headers set another.
 Response header names are lowercase. `get` and `post` also accept a timeout
 number in place of the options, as in dog3.
 
+`stream` is for responses that come a piece at a time, such as server-sent
+events: `f` runs while the request is still going, so a script can show
+progress. The `timeout` option covers the whole request.
+
 ```dog ignore
+let words = 0;
+stream https://llm.example.com/v1/chat/completions [body = [stream = true, messages = $messages]] fn (line) {
+    if ($line == "data: [DONE]") { return false };
+    if { starts_with $line "data: " } { words += 1 }
+};
+
 r = { fetch https://api.example.com/items [
     method = PUT,
     headers = [Authorization = "Bearer $token"],
